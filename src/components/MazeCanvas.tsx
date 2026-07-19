@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { samePos } from "../game/types";
 import type { Position, Stage } from "../game/types";
-import { CELL, WALL, boardPx } from "./boardMetrics";
+import { CELL, GUTTER, WALL, boardPx, canvasPx } from "./boardMetrics";
 
 const WALL_COLOR = "#484848";
 const FLOOR_COLOR = "#1A1A1A";
@@ -14,6 +14,8 @@ const CRUMBLE_HOLE_COLOR = "#0A0A0A";
 const BOMB_HINT_COLOR = "#E06C60";
 const BOMB_REVEAL_FILL = "#4A1414";
 const BOMB_HIT_COLOR = "#FF6B5B";
+const LINE_LIMIT_COLOR = "#6A7A8A";
+const LINE_LIMIT_ZERO_COLOR = "#CC4444";
 
 /** 8近傍(自マスを除く)の相対座標 */
 const NEIGHBORS_8: Position[] = [
@@ -31,6 +33,10 @@ interface Props {
   crumbleLeft: number[];
   /** 踏んでしまった爆弾マス(失敗時のみ非null。非nullなら全爆弾を表示する) */
   bombHit: Position | null;
+  /** 各行への進入回数(lineLimits ステージの残り回数表示に使う) */
+  rowUsed: number[];
+  /** 各列への進入回数(lineLimits ステージの残り回数表示に使う) */
+  colUsed: number[];
 }
 
 export function MazeCanvas({
@@ -41,10 +47,16 @@ export function MazeCanvas({
   warpFlash,
   crumbleLeft,
   bombHit,
+  rowUsed,
+  colUsed,
 }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
   const size = stage.size;
-  const totalPx = boardPx(size);
+  const hasLineLimits = stage.lineLimits !== null;
+  const gridPx = boardPx(size);
+  const totalPx = canvasPx(size, hasLineLimits);
+  // lineLimits ステージは盤面の上・左にガター分だけオフセットする
+  const offset = hasLineLimits ? GUTTER : 0;
 
   useEffect(() => {
     const canvas = ref.current;
@@ -54,10 +66,10 @@ export function MazeCanvas({
     ctx.clearRect(0, 0, totalPx, totalPx);
 
     ctx.fillStyle = WALL_COLOR;
-    ctx.fillRect(0, 0, totalPx, totalPx);
+    ctx.fillRect(offset, offset, gridPx, gridPx);
 
-    const cx0 = (c: number) => WALL + c * (CELL + WALL);
-    const cy0 = (r: number) => WALL + r * (CELL + WALL);
+    const cx0 = (c: number) => offset + WALL + c * (CELL + WALL);
+    const cy0 = (r: number) => offset + WALL + r * (CELL + WALL);
     const inPath = (path: Position[] | null, r: number, c: number) =>
       path !== null && path.some(([pr, pc]) => pr === r && pc === c);
 
@@ -252,7 +264,40 @@ export function MazeCanvas({
     const hw = 10;
     ctx.fillStyle = "#E8E8E8";
     ctx.fillRect(px + CELL / 2 - hw, py + CELL / 2 - hw, hw * 2, hw * 2);
-  }, [stage, pos, visitedPath, hintPath, warpFlash, crumbleLeft, bombHit, size, totalPx]);
+
+    // 行列制限: 上端に各列、左端に各行の残り進入回数を表示する(残り0は赤系で強調)
+    if (hasLineLimits && stage.lineLimits) {
+      const { rows, cols } = stage.lineLimits;
+      ctx.font = "bold 10px 'Courier New'";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      for (let c = 0; c < size; c++) {
+        const remaining = cols[c] - colUsed[c];
+        ctx.fillStyle = remaining <= 0 ? LINE_LIMIT_ZERO_COLOR : LINE_LIMIT_COLOR;
+        ctx.fillText(String(remaining), cx0(c) + CELL / 2, offset / 2);
+      }
+      for (let r = 0; r < size; r++) {
+        const remaining = rows[r] - rowUsed[r];
+        ctx.fillStyle = remaining <= 0 ? LINE_LIMIT_ZERO_COLOR : LINE_LIMIT_COLOR;
+        ctx.fillText(String(remaining), offset / 2, cy0(r) + CELL / 2);
+      }
+    }
+  }, [
+    stage,
+    pos,
+    visitedPath,
+    hintPath,
+    warpFlash,
+    crumbleLeft,
+    bombHit,
+    rowUsed,
+    colUsed,
+    size,
+    totalPx,
+    gridPx,
+    offset,
+    hasLineLimits,
+  ]);
 
   return <canvas ref={ref} width={totalPx} height={totalPx} className="maze-canvas" />;
 }

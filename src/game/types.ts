@@ -48,6 +48,8 @@ export interface StageDef {
   oneStroke?: boolean;
   /** 0〜1。行き止まりを確率的に壊してループ(閉路)を作り、ルート選択を生む度合い */
   braid?: number;
+  /** 各行・各列に「進入できる回数」の上限を設けるイラストロジック風の制限 */
+  lineLimits?: { rows: number[]; cols: number[] } | null;
 }
 
 /** 定義から生成された、プレイ可能なステージ */
@@ -62,6 +64,8 @@ export interface Stage extends StageDef {
   bombs: Position[];
   oneStroke: boolean;
   braid: number;
+  /** 未設定なら null に正規化される */
+  lineLimits: { rows: number[]; cols: number[] } | null;
 }
 
 export const samePos = (a: Position, b: Position): boolean =>

@@ -3,7 +3,7 @@ import { calcRank, calcScore } from "../game/score";
 import type { Rank } from "../game/score";
 import { ALL_STAGES } from "../game/stages";
 import { samePos } from "../game/types";
-import type { Position } from "../game/types";
+import type { Position, Stage } from "../game/types";
 
 export type GameStatus = "playing" | "cleared" | "failed";
 
@@ -27,6 +27,10 @@ export interface GameState {
   crumbleLeft: number[];
   /** 踏んでしまった爆弾マス(失敗時のみ非null) */
   bombHit: Position | null;
+  /** 各行への進入回数(lineLimits のないステージでも配列自体は保持する) */
+  rowUsed: number[];
+  /** 各列への進入回数(lineLimits のないステージでも配列自体は保持する) */
+  colUsed: number[];
 }
 
 type Action =
@@ -37,6 +41,11 @@ type Action =
 
 export function initState(stageIdx: number): GameState {
   const stage = ALL_STAGES[stageIdx];
+  // 行・列進入回数は start の分を先に加算しておく(start マスも「進入」の1回として数える)
+  const rowUsed = Array<number>(stage.size).fill(0);
+  const colUsed = Array<number>(stage.size).fill(0);
+  rowUsed[stage.start[0]] = 1;
+  colUsed[stage.start[1]] = 1;
   return {
     stageIdx,
     pos: stage.start,
@@ -48,18 +57,61 @@ export function initState(stageIdx: number): GameState {
     lastWarp: null,
     crumbleLeft: stage.crumbleCells.map((c) => c.uses),
     bombHit: null,
+    rowUsed,
+    colUsed,
   };
 }
 
 const DIR_KEYS = { "-1,0": "n", "1,0": "s", "0,1": "e", "0,-1": "w" } as const;
 
-/** 隣接4マスを走査するための方向定義(一筆書きモードの詰み判定に使う) */
+/** 隣接4マスを走査するための方向定義(詰み判定に使う) */
 const NEIGHBOR_DIRS: { dr: number; dc: number; key: "n" | "s" | "e" | "w" }[] = [
   { dr: -1, dc: 0, key: "n" },
   { dr: 1, dc: 0, key: "s" },
   { dr: 0, dc: 1, key: "e" },
   { dr: 0, dc: -1, key: "w" },
 ];
+
+/**
+ * 着地マス pos への移動が(壁以外の理由で)ブロックされるかどうかを判定する。
+ * 一筆書きモードの再訪禁止・崩れる床の残回数0・行列進入回数の上限超過が対象。
+ * 爆弾は「踏めるが即失敗する」マスであり移動自体はブロックされないため、ここでは扱わない。
+ */
+function isBlocked(stage: Stage, state: GameState, pos: Position): boolean {
+  if (stage.oneStroke && state.visited.some((v) => samePos(v, pos))) {
+    return true;
+  }
+
+  const crumbleIdx = stage.crumbleCells.findIndex((c) => samePos(c.pos, pos));
+  if (crumbleIdx >= 0 && state.crumbleLeft[crumbleIdx] <= 0) {
+    return true;
+  }
+
+  if (stage.lineLimits) {
+    const [r, c] = pos;
+    if (state.rowUsed[r] + 1 > stage.lineLimits.rows[r]) return true;
+    if (state.colUsed[c] + 1 > stage.lineLimits.cols[c]) return true;
+  }
+
+  return false;
+}
+
+/**
+ * pos から壁で塞がれておらず、かつ isBlocked にも該当しない移動先が1つでもあるか。
+ * 一筆書き・行列制限ステージの詰み判定(これ以上動けなくなったら failed)に使う。
+ */
+function hasLegalMove(stage: Stage, state: GameState, pos: Position): boolean {
+  const [pr, pc] = pos;
+  return NEIGHBOR_DIRS.some(({ dr, dc, key }) => {
+    if (!stage.grid[pr][pc][key]) return false;
+    let nr = pr + dr;
+    let nc = pc + dc;
+    const warp = stage.warps.find((w) => w.from[0] === nr && w.from[1] === nc);
+    if (warp) [nr, nc] = warp.to;
+    const npos: Position = [nr, nc];
+    return !isBlocked(stage, state, npos);
+  });
+}
 
 export function reduce(state: GameState, action: Action): GameState {
   switch (action.type) {
@@ -83,14 +135,9 @@ export function reduce(state: GameState, action: Action): GameState {
 
       const pos: Position = [nr, nc];
 
-      // 一筆書きモード: 訪問済みマスへの移動は壁と同じ扱いでブロック(歩数も増えない)
-      if (stage.oneStroke && state.visited.some((v) => samePos(v, pos))) {
-        return state;
-      }
-
-      // 着地マスが崩れる床で、残回数が 0 なら移動をブロック
-      const crumbleIdx = stage.crumbleCells.findIndex((c) => samePos(c.pos, pos));
-      if (crumbleIdx >= 0 && state.crumbleLeft[crumbleIdx] <= 0) {
+      // 一筆書きの再訪・崩れる床の残回数0・行列進入回数の上限超過のいずれかならブロック
+      // (歩数消費なし。壁と同じ扱い)
+      if (isBlocked(stage, state, pos)) {
         return state;
       }
 
@@ -103,10 +150,17 @@ export function reduce(state: GameState, action: Action): GameState {
       });
 
       // 崩れる床の残回数を減らす
+      const crumbleIdx = stage.crumbleCells.findIndex((c) => samePos(c.pos, pos));
       const crumbleLeft = state.crumbleLeft.slice();
       if (crumbleIdx >= 0) {
         crumbleLeft[crumbleIdx]--;
       }
+
+      // 行・列への進入回数を加算(lineLimits がないステージでも配列自体は保持し続ける)
+      const rowUsed = state.rowUsed.slice();
+      const colUsed = state.colUsed.slice();
+      rowUsed[nr]++;
+      colUsed[nc]++;
 
       const next: GameState = {
         ...state,
@@ -116,6 +170,8 @@ export function reduce(state: GameState, action: Action): GameState {
         cpDone,
         lastWarp: warp ? pos : null,
         crumbleLeft,
+        rowUsed,
+        colUsed,
       };
 
       // 着地マス(ワープ後なら着地先)が爆弾なら、歩数は消費した上で即失敗
@@ -129,20 +185,18 @@ export function reduce(state: GameState, action: Action): GameState {
           const score = calcScore(steps, stage.par, stage.limit);
           return { ...next, status: "cleared", result: { score, rank: calcRank(score), steps } };
         }
-        // 詰み判定: 現在地から移動できる(壁がなく未訪問の)隣接マスが1つもなければ失敗
-        const [pr, pc] = pos;
-        const hasMove = NEIGHBOR_DIRS.some(({ dr, dc, key }) => {
-          if (!stage.grid[pr][pc][key]) return false;
-          const npos: Position = [pr + dr, pc + dc];
-          return !next.visited.some((v) => samePos(v, npos));
-        });
-        if (!hasMove) return { ...next, status: "failed" };
+        // 詰み判定: 現在地から移動できる隣接マスが1つもなければ失敗
+        if (!hasLegalMove(stage, next, pos)) return { ...next, status: "failed" };
         return next;
       }
 
       if (samePos(pos, stage.goal) && cpDone.every(Boolean)) {
         const score = calcScore(steps, stage.par, stage.limit);
         return { ...next, status: "cleared", result: { score, rank: calcRank(score), steps } };
+      }
+      // 行列制限ステージの詰み判定: 現在地から移動できる隣接マスが1つもなければ失敗
+      if (stage.lineLimits && !hasLegalMove(stage, next, pos)) {
+        return { ...next, status: "failed" };
       }
       if (steps >= stage.limit) return { ...next, status: "failed" };
       return next;

@@ -16,6 +16,12 @@ export function buildStage(def: StageDef): Stage {
   const bombs = def.bombs ?? [];
   const oneStroke = def.oneStroke ?? false;
   const braid = def.braid ?? 0;
+  const lineLimits = def.lineLimits ?? null;
+
+  // lineLimits の配列長は size と一致していなければならない
+  if (lineLimits && (lineLimits.rows.length !== def.size || lineLimits.cols.length !== def.size)) {
+    throw new Error(`Stage ${def.id}: lineLimits の配列長が size と一致していません`);
+  }
 
   if (oneStroke) {
     // 一筆書きモードは他ギミックと併用しない(全マス踏破の判定がシンプルでなくなるため)
@@ -24,7 +30,8 @@ export function buildStage(def: StageDef): Stage {
       def.warps.length > 0 ||
       heavyCells.length > 0 ||
       crumbleCells.length > 0 ||
-      bombs.length > 0
+      bombs.length > 0 ||
+      lineLimits !== null
     ) {
       throw new Error(`Stage ${def.id}: 一筆書きモードは他のギミックと併用できません`);
     }
@@ -32,7 +39,18 @@ export function buildStage(def: StageDef): Stage {
     const grid = generateOpenGrid(def.size);
     // 再訪不可なので歩数は「全マス数-1」を超えられず、par もそれと一致する
     const par = def.size * def.size - 1;
-    return { ...def, grid, par, limit: par, heavyCells, crumbleCells, bombs, oneStroke, braid };
+    return {
+      ...def,
+      grid,
+      par,
+      limit: par,
+      heavyCells,
+      crumbleCells,
+      bombs,
+      oneStroke,
+      braid,
+      lineLimits,
+    };
   }
 
   const grid = generateMaze(def.size, def.seed, braid);
@@ -86,6 +104,40 @@ export function buildStage(def: StageDef): Stage {
     }
   }
 
+  // 最適経路(start含む)の行・列進入回数が、lineLimits の上限を超えていないかチェック
+  // (超えていると、最短経路ですら踏破不能な「解けない」ステージ定義になってしまう)
+  if (lineLimits) {
+    const rowsUsage = Array<number>(def.size).fill(0);
+    const colsUsage = Array<number>(def.size).fill(0);
+    for (const [r, c] of route) {
+      rowsUsage[r]++;
+      colsUsage[c]++;
+    }
+    for (let i = 0; i < def.size; i++) {
+      if (rowsUsage[i] > lineLimits.rows[i]) {
+        throw new Error(
+          `Stage ${def.id}: 最適経路が行${i}に${rowsUsage[i]}回進入しますが、上限は${lineLimits.rows[i]}です`
+        );
+      }
+      if (colsUsage[i] > lineLimits.cols[i]) {
+        throw new Error(
+          `Stage ${def.id}: 最適経路が列${i}に${colsUsage[i]}回進入しますが、上限は${lineLimits.cols[i]}です`
+        );
+      }
+    }
+  }
+
   const par = routeCost(route, heavyCells);
-  return { ...def, grid, par, limit: par * 2, heavyCells, crumbleCells, bombs, oneStroke, braid };
+  return {
+    ...def,
+    grid,
+    par,
+    limit: par * 2,
+    heavyCells,
+    crumbleCells,
+    bombs,
+    oneStroke,
+    braid,
+    lineLimits,
+  };
 }

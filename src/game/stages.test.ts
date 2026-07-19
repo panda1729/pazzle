@@ -195,6 +195,105 @@ describe("STAGES", () => {
     expect(() => buildStage(invalidDef)).toThrow();
   });
 
+  it("STAGE 10(LINE LIMIT)が含まれ、lineLimits が設定され par が12以上・他ギミックなし", () => {
+    const stage = STAGES.find((s) => s.id === 10);
+    expect(stage).toBeDefined();
+    expect(stage!.desc).toBe("LINE LIMIT");
+    expect(stage!.lineLimits).not.toBeNull();
+    expect(stage!.lineLimits!.rows.length).toBe(stage!.size);
+    expect(stage!.lineLimits!.cols.length).toBe(stage!.size);
+    expect(stage!.par).toBeGreaterThanOrEqual(12);
+    expect(stage!.checkpoints.length).toBe(0);
+    expect(stage!.warps.length).toBe(0);
+    expect(stage!.heavyCells.length).toBe(0);
+    expect(stage!.crumbleCells.length).toBe(0);
+    expect(stage!.bombs.length).toBe(0);
+  });
+
+  it("STAGE 10: 最適経路の行・列進入回数(start含む)が lineLimits の範囲内に収まっている", () => {
+    const stage = STAGES.find((s) => s.id === 10)!;
+    const route = findRouteThrough(stage.grid, stage.size, stage.start, stage.goal, [], [], []);
+    expect(route).not.toBeNull();
+
+    const rowsUsage = Array(stage.size).fill(0);
+    const colsUsage = Array(stage.size).fill(0);
+    for (const [r, c] of route!) {
+      rowsUsage[r]++;
+      colsUsage[c]++;
+    }
+    for (let i = 0; i < stage.size; i++) {
+      expect(rowsUsage[i]).toBeLessThanOrEqual(stage.lineLimits!.rows[i]);
+      expect(colsUsage[i]).toBeLessThanOrEqual(stage.lineLimits!.cols[i]);
+    }
+  });
+
+  it("STAGE 10: 最適経路の使用回数ちょうどが上限になっている(タイトな)行・列が2本以上ある", () => {
+    const stage = STAGES.find((s) => s.id === 10)!;
+    const route = findRouteThrough(stage.grid, stage.size, stage.start, stage.goal, [], [], []);
+    expect(route).not.toBeNull();
+
+    const rowsUsage = Array(stage.size).fill(0);
+    const colsUsage = Array(stage.size).fill(0);
+    for (const [r, c] of route!) {
+      rowsUsage[r]++;
+      colsUsage[c]++;
+    }
+    const tightCount =
+      rowsUsage.filter((u, i) => u === stage.lineLimits!.rows[i]).length +
+      colsUsage.filter((u, i) => u === stage.lineLimits!.cols[i]).length;
+    expect(tightCount).toBeGreaterThanOrEqual(2);
+  });
+
+  it("lineLimits の配列長が size と一致しない定義は throw", () => {
+    const invalidDef: StageDef = {
+      id: 999,
+      label: "INVALID",
+      desc: "TEST",
+      size: 5,
+      seed: 42,
+      start: [0, 0],
+      goal: [4, 4],
+      checkpoints: [],
+      warps: [],
+      lineLimits: { rows: [5, 5, 5, 5], cols: [5, 5, 5, 5, 5] }, // rows の長さが size と不一致
+    };
+    expect(() => buildStage(invalidDef)).toThrow();
+  });
+
+  it("最適経路が lineLimits の上限を超える不正な定義は throw", () => {
+    const invalidDef: StageDef = {
+      id: 999,
+      label: "INVALID",
+      desc: "TEST",
+      size: 5,
+      seed: 42,
+      start: [0, 0],
+      goal: [4, 4],
+      checkpoints: [],
+      warps: [],
+      // 最短経路ですら通れないほど厳しい上限(全行・全列1回まで)
+      lineLimits: { rows: [1, 1, 1, 1, 1], cols: [1, 1, 1, 1, 1] },
+    };
+    expect(() => buildStage(invalidDef)).toThrow();
+  });
+
+  it("oneStroke: true と lineLimits を併用する定義は throw", () => {
+    const invalidDef: StageDef = {
+      id: 999,
+      label: "INVALID",
+      desc: "TEST",
+      size: 5,
+      seed: 0,
+      start: [0, 0],
+      goal: [4, 4],
+      checkpoints: [],
+      warps: [],
+      oneStroke: true,
+      lineLimits: { rows: [5, 5, 5, 5, 5], cols: [5, 5, 5, 5, 5] },
+    };
+    expect(() => buildStage(invalidDef)).toThrow();
+  });
+
   it("oneStroke: true と bombs を併用する定義は throw", () => {
     const invalidDef: StageDef = {
       id: 999,

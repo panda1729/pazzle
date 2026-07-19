@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CheckpointList } from "./components/CheckpointList";
 import { DPad } from "./components/DPad";
-import { boardPx } from "./components/boardMetrics";
+import { GUTTER, boardPx } from "./components/boardMetrics";
 import { MazeCanvas } from "./components/MazeCanvas";
 import { ResultOverlay } from "./components/ResultOverlay";
 import { StageTabs } from "./components/StageTabs";
@@ -52,7 +52,8 @@ export default function App() {
     return () => window.removeEventListener("keydown", handler);
   }, [move]);
 
-  const widthPx = boardPx(stage.size);
+  // lineLimits ステージは MazeCanvas 側もガター分だけ広く描画するため、幅を揃える
+  const widthPx = boardPx(stage.size) + (stage.lineLimits ? GUTTER : 0);
 
   return (
     <div className="app">
@@ -77,6 +78,8 @@ export default function App() {
           warpFlash={state.lastWarp}
           crumbleLeft={state.crumbleLeft}
           bombHit={state.bombHit}
+          rowUsed={state.rowUsed}
+          colUsed={state.colUsed}
         />
       </div>
 

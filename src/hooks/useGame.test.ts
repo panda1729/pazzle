@@ -202,3 +202,79 @@ describe("reduce (move) - oneStroke", () => {
     expect(finalState.visited.length).toBe(8);
   });
 });
+
+describe("reduce (move) - line limits (STAGE 10)", () => {
+  const idx = STAGES.findIndex((s) => s.id === 10);
+
+  it("STAGE 10 が見つかる", () => {
+    expect(idx).toBeGreaterThanOrEqual(0);
+    expect(STAGES[idx].lineLimits).not.toBeNull();
+  });
+
+  it("行の上限に達した後、その行へ戻る移動はブロックされる(歩数消費なし)", () => {
+    const stage = STAGES[idx];
+    const limits = stage.lineLimits!;
+
+    const E: [number, number] = [0, 1];
+    const S: [number, number] = [1, 0];
+    const N: [number, number] = [-1, 0];
+    // (0,0)→(0,1)→(1,1)→(1,2)→(0,2)→(0,3)→(1,3) で row0 への進入回数がちょうど上限(4)に達する
+    const moves: [number, number][] = [E, S, E, N, E, S];
+
+    const state = moves.reduce(
+      (s, [dr, dc]) => reduce(s, { type: "move", dr, dc }),
+      initState(idx),
+    );
+    expect(state.pos).toEqual([1, 3]);
+    expect(state.steps).toBe(6);
+    expect(state.rowUsed[0]).toBe(limits.rows[0]);
+
+    // row0 に戻る移動(北)を試みると行の上限超過でブロックされる
+    const [dr, dc] = N;
+    const blocked = reduce(state, { type: "move", dr, dc });
+    expect(blocked.pos).toEqual([1, 3]);
+    expect(blocked.steps).toBe(6);
+    expect(blocked.rowUsed[0]).toBe(limits.rows[0]);
+    expect(blocked.status).toBe("playing");
+  });
+
+  it("正しい配分でゴールすればクリアできる(ソルバー経路を再生)", () => {
+    const stage = STAGES[idx];
+    const route = findRouteThrough(stage.grid, stage.size, stage.start, stage.goal, [], [], []);
+    expect(route).not.toBeNull();
+
+    const moves: [number, number][] = [];
+    for (let i = 1; i < route!.length; i++) {
+      const [pr, pc] = route![i - 1];
+      const [nr, nc] = route![i];
+      moves.push([nr - pr, nc - pc]);
+    }
+
+    const finalState = moves.reduce(
+      (s, [dr, dc]) => reduce(s, { type: "move", dr, dc }),
+      initState(idx),
+    );
+
+    expect(finalState.pos).toEqual(stage.goal);
+    expect(finalState.status).toBe("cleared");
+    expect(finalState.result?.steps).toBe(stage.par);
+  });
+
+  it("行・列の予算を無駄遣いして身動きが取れなくなると failed になる", () => {
+    const idx10 = idx;
+    const E: [number, number] = [0, 1];
+    const S: [number, number] = [1, 0];
+    const N: [number, number] = [-1, 0];
+    // (0,0)→(0,1)→(1,1)→(0,1) と往復するだけで col1 の進入回数(上限3)を使い切り、
+    // (0,1) から動ける方向(西=col0は上限1で埋まっている、南=col1は上限で埋まっている)が無くなる
+    const moves: [number, number][] = [E, S, N];
+
+    const finalState = moves.reduce(
+      (s, [dr, dc]) => reduce(s, { type: "move", dr, dc }),
+      initState(idx10),
+    );
+
+    expect(finalState.pos).toEqual([0, 1]);
+    expect(finalState.status).toBe("failed");
+  });
+});
