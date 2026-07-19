@@ -387,3 +387,37 @@ export function buildDailyStage(date: Date): Stage {
   });
   return buildStage(def);
 }
+
+/**
+ * フリープレイの難易度一覧(選択画面のカード表示順でもある)。
+ * id 規約: 手作りステージが 1〜99、デイリーが 100 を使うため、フリープレイは
+ * 200 + このインデックス(200〜203)を使い、progress.ts の stageKeyFor が
+ * 「id >= 200 は保存しない」で確実にフリープレイを識別できるようにしている。
+ */
+export const FREE_PLAY_DIFFICULTIES: Difficulty[] = ["easy", "normal", "hard", "extreme"];
+
+/** 難易度に対応するフリープレイの id(200番台)を返す */
+export function freePlayId(difficulty: Difficulty): number {
+  return 200 + FREE_PLAY_DIFFICULTIES.indexOf(difficulty);
+}
+
+/** id がフリープレイ(200番台)のものであれば対応する難易度を、そうでなければ null を返す */
+export function freePlayDifficultyOf(id: number): Difficulty | null {
+  if (id < 200 || id >= 200 + FREE_PLAY_DIFFICULTIES.length) return null;
+  return FREE_PLAY_DIFFICULTIES[id - 200];
+}
+
+/** [0, 0xffffffff) の整数からランダムなシードを1つ選ぶ(生成自体は決定的、シード選びのみ非決定的) */
+export function randomSeed(): number {
+  return Math.floor(Math.random() * 0xffffffff);
+}
+
+/** difficulty・seed からフリープレイの Stage を組み立てる。label/desc/id はフリープレイ規約に従う */
+export function buildFreePlayStage(difficulty: Difficulty, seed: number): Stage {
+  const def = generateStageDef(difficulty, seed, {
+    id: freePlayId(difficulty),
+    label: `FREE ${difficulty.toUpperCase()}`,
+    desc: `SEED ${seed}`,
+  });
+  return buildStage(def);
+}

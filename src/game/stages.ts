@@ -1,5 +1,4 @@
 import { buildStage } from "./build";
-import { buildDailyStage } from "./generator";
 import type { Stage, StageDef } from "./types";
 
 // buildStage は build.ts に定義されているが、既存コード(テスト含む)との互換のため
@@ -192,6 +191,3 @@ export const STAGE_DEFS: StageDef[] = [
 ];
 
 export const STAGES: Stage[] = STAGE_DEFS.map(buildStage);
-
-/** 手作りステージに、その日のデイリーチャレンジ(自動生成)を末尾に加えた一覧 */
-export const ALL_STAGES: Stage[] = [...STAGES, buildDailyStage(new Date())];

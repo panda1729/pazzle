@@ -6,10 +6,10 @@ import { initState, reduce } from "./useGame";
 
 describe("reduce (move)", () => {
   it("heavy マスに踏み込むと歩数が2増える", () => {
-    const idx = STAGES.findIndex((s) => s.id === 4);
-    expect(idx).toBeGreaterThanOrEqual(0);
+    const stage = STAGES.find((s) => s.id === 4);
+    expect(stage).toBeDefined();
 
-    let state = initState(idx);
+    let state = initState(stage!);
     expect(state.steps).toBe(0);
 
     // (0,0) → 南へ1歩 → (1,0)(通常マス、+1)
@@ -24,8 +24,8 @@ describe("reduce (move)", () => {
   });
 
   it("heavy マスでない移動は歩数が1しか増えない", () => {
-    const idx = STAGES.findIndex((s) => s.id === 1);
-    let state = initState(idx);
+    const stage = STAGES.find((s) => s.id === 1)!;
+    let state = initState(stage);
     // STAGE 01 の start(0,0)は東が開通している
     state = reduce(state, { type: "move", dr: 0, dc: 1 });
     expect(state.pos).toEqual([0, 1]);
@@ -33,12 +33,11 @@ describe("reduce (move)", () => {
   });
 
   it("crumble マスに踏み込むと残回数が減る", () => {
-    const idx = STAGES.findIndex((s) => s.id === 5);
-    expect(idx).toBeGreaterThanOrEqual(0);
+    const stage = STAGES.find((s) => s.id === 5);
+    expect(stage).toBeDefined();
 
-    const state = initState(idx);
-    const stage = STAGES[idx];
-    const crumbleIdx = stage.crumbleCells.findIndex((c) => c.uses === 1);
+    const state = initState(stage!);
+    const crumbleIdx = stage!.crumbleCells.findIndex((c) => c.uses === 1);
     expect(crumbleIdx).toBeGreaterThanOrEqual(0);
 
     const initialUses = state.crumbleLeft[crumbleIdx];
@@ -46,10 +45,10 @@ describe("reduce (move)", () => {
   });
 
   it("crumble マスの残回数が0になると移動がブロックされる", () => {
-    const idx = STAGES.findIndex((s) => s.id === 5);
-    expect(idx).toBeGreaterThanOrEqual(0);
+    const stage = STAGES.find((s) => s.id === 5);
+    expect(stage).toBeDefined();
 
-    const state = initState(idx);
+    const state = initState(stage!);
     const crumbleIdx = 0; // 最初の crumble マス [4, 2] with uses: 1
 
     // 手動で crumbleLeft を 0 に設定して、ロジックが正しく動作することを確認
@@ -63,14 +62,13 @@ describe("reduce (move)", () => {
 });
 
 describe("reduce (move) - bomb (STAGE 09)", () => {
-  const idx = STAGES.findIndex((s) => s.id === 9);
+  const stage = STAGES.find((s) => s.id === 9)!;
 
   it("STAGE 09 が見つかる", () => {
-    expect(idx).toBeGreaterThanOrEqual(0);
+    expect(stage).toBeDefined();
   });
 
   it("爆弾マスに踏み込むと歩数は消費した上で failed になり、bombHit がセットされる", () => {
-    const stage = STAGES[idx];
     const targetBomb = stage.bombs[0];
     // 実際のゲーム用グリッド(壁は爆弾で塞がれていない)上で、スタートから爆弾マスへの経路をソルバーで求める
     const path = findPath(stage.grid, stage.size, stage.start, targetBomb);
@@ -92,7 +90,7 @@ describe("reduce (move) - bomb (STAGE 09)", () => {
 
     const finalState = moves.reduce(
       (state, [dr, dc]) => reduce(state, { type: "move", dr, dc }),
-      initState(idx),
+      initState(stage),
     );
 
     expect(finalState.pos).toEqual(firstBombOnPath);
@@ -101,7 +99,6 @@ describe("reduce (move) - bomb (STAGE 09)", () => {
   });
 
   it("爆弾を避けてゴールすればクリアできる(爆弾を塞いだグリッドでソルバーが求めた経路を再生する)", () => {
-    const stage = STAGES[idx];
     // build.ts の par 算出と同じく、爆弾マスを塞いだグリッドで安全な最短経路を求める
     const safeGrid = blockCells(stage.grid, stage.size, stage.bombs);
     const route = findRouteThrough(safeGrid, stage.size, stage.start, stage.goal, [], [], []);
@@ -120,7 +117,7 @@ describe("reduce (move) - bomb (STAGE 09)", () => {
 
     const finalState = moves.reduce(
       (state, [dr, dc]) => reduce(state, { type: "move", dr, dc }),
-      initState(idx),
+      initState(stage),
     );
 
     expect(finalState.pos).toEqual(stage.goal);
@@ -131,10 +128,10 @@ describe("reduce (move) - bomb (STAGE 09)", () => {
 });
 
 describe("reduce (move) - oneStroke", () => {
-  const idx = STAGES.findIndex((s) => s.id === 6);
+  const stage = STAGES.find((s) => s.id === 6)!;
 
   it("STAGE 06 が見つかる", () => {
-    expect(idx).toBeGreaterThanOrEqual(0);
+    expect(stage).toBeDefined();
   });
 
   it("蛇行(boustrophedon)ルートで全マス踏破しクリアできる(Sランク)", () => {
@@ -156,7 +153,7 @@ describe("reduce (move) - oneStroke", () => {
 
     const finalState = moves.reduce(
       (state, [dr, dc]) => reduce(state, { type: "move", dr, dc }),
-      initState(idx),
+      initState(stage),
     );
 
     expect(finalState.pos).toEqual([4, 4]);
@@ -168,7 +165,7 @@ describe("reduce (move) - oneStroke", () => {
   });
 
   it("訪問済みマスへの移動はブロックされる(歩数も増えない)", () => {
-    let state = initState(idx);
+    let state = initState(stage);
     state = reduce(state, { type: "move", dr: 0, dc: 1 }); // (0,0) -> (0,1)
     expect(state.pos).toEqual([0, 1]);
     expect(state.steps).toBe(1);
@@ -194,7 +191,7 @@ describe("reduce (move) - oneStroke", () => {
 
     const finalState = moves.reduce(
       (state, [dr, dc]) => reduce(state, { type: "move", dr, dc }),
-      initState(idx),
+      initState(stage),
     );
 
     expect(finalState.pos).toEqual([1, 0]);
@@ -204,15 +201,14 @@ describe("reduce (move) - oneStroke", () => {
 });
 
 describe("reduce (move) - line limits (STAGE 10)", () => {
-  const idx = STAGES.findIndex((s) => s.id === 10);
+  const stage = STAGES.find((s) => s.id === 10)!;
 
   it("STAGE 10 が見つかる", () => {
-    expect(idx).toBeGreaterThanOrEqual(0);
-    expect(STAGES[idx].lineLimits).not.toBeNull();
+    expect(stage).toBeDefined();
+    expect(stage.lineLimits).not.toBeNull();
   });
 
   it("行の上限に達した後、その行へ戻る移動はブロックされる(歩数消費なし)", () => {
-    const stage = STAGES[idx];
     const limits = stage.lineLimits!;
 
     const E: [number, number] = [0, 1];
@@ -223,7 +219,7 @@ describe("reduce (move) - line limits (STAGE 10)", () => {
 
     const state = moves.reduce(
       (s, [dr, dc]) => reduce(s, { type: "move", dr, dc }),
-      initState(idx),
+      initState(stage),
     );
     expect(state.pos).toEqual([1, 3]);
     expect(state.steps).toBe(6);
@@ -239,7 +235,6 @@ describe("reduce (move) - line limits (STAGE 10)", () => {
   });
 
   it("正しい配分でゴールすればクリアできる(ソルバー経路を再生)", () => {
-    const stage = STAGES[idx];
     const route = findRouteThrough(stage.grid, stage.size, stage.start, stage.goal, [], [], []);
     expect(route).not.toBeNull();
 
@@ -252,7 +247,7 @@ describe("reduce (move) - line limits (STAGE 10)", () => {
 
     const finalState = moves.reduce(
       (s, [dr, dc]) => reduce(s, { type: "move", dr, dc }),
-      initState(idx),
+      initState(stage),
     );
 
     expect(finalState.pos).toEqual(stage.goal);
@@ -261,7 +256,6 @@ describe("reduce (move) - line limits (STAGE 10)", () => {
   });
 
   it("行・列の予算を無駄遣いして身動きが取れなくなると failed になる", () => {
-    const idx10 = idx;
     const E: [number, number] = [0, 1];
     const S: [number, number] = [1, 0];
     const N: [number, number] = [-1, 0];
@@ -271,7 +265,7 @@ describe("reduce (move) - line limits (STAGE 10)", () => {
 
     const finalState = moves.reduce(
       (s, [dr, dc]) => reduce(s, { type: "move", dr, dc }),
-      initState(idx10),
+      initState(stage),
     );
 
     expect(finalState.pos).toEqual([0, 1]);

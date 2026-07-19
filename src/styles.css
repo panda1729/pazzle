@@ -47,37 +47,82 @@ button {
   margin-left: 12px;
 }
 
-/* ── Stage tabs ── */
-.stage-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 3px;
-  margin-bottom: 14px;
+/* ── Stage select ── */
+.select-section {
+  width: 100%;
+  max-width: 640px;
+  margin-bottom: 22px;
 }
-.stage-tab {
-  background: transparent;
-  border: 1px solid #282828;
+.select-section-title {
+  font-size: 9px;
+  letter-spacing: 5px;
   color: #444;
-  padding: 2px 11px;
-  font-size: 8px;
-  letter-spacing: 3px;
-  cursor: pointer;
+  margin-bottom: 8px;
+  text-align: center;
 }
-.stage-tab.is-active {
-  background: #1e1e1e;
+.stage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 6px;
+}
+.stage-card {
+  background: #111;
+  border: 1px solid #282828;
+  color: #808080;
+  padding: 10px 10px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.stage-card:hover {
   border-color: #484848;
   color: #c8c8c8;
 }
+.stage-card-label {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: #d0d0d0;
+}
+.stage-card-desc {
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: #585858;
+}
+.stage-card-meta {
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: #444;
+}
+.stage-card-badge {
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: #4ecdc4;
+  margin-top: 2px;
+}
+.stage-card-rank {
+  color: #ffd700;
+}
 /* デイリーチャレンジ(自動生成、毎日変わる)を通常ステージと視覚的に区別する */
-.stage-tab.is-daily {
+.stage-card.is-daily {
   border-color: #6a4b1e;
+}
+.stage-card.is-daily .stage-card-label {
   color: #c8963c;
 }
-.stage-tab.is-daily.is-active {
-  background: #2a1c08;
+.stage-card.is-daily:hover {
   border-color: #c8963c;
-  color: #ffcf70;
+}
+/* フリープレイ(自動生成、選ぶたびに新しいシード)も視覚的に区別する */
+.stage-card.is-freeplay {
+  border-color: #2a4a3a;
+}
+.stage-card.is-freeplay .stage-card-label {
+  color: #4a9a7c;
+}
+.stage-card.is-freeplay:hover {
+  border-color: #4ecdc4;
 }
 
 /* ── Stats ── */
@@ -288,5 +333,8 @@ button {
 }
 .overlay-actions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 7px;
+  max-width: 260px;
 }

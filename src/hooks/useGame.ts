@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useReducer } from "react";
 import { calcRank, calcScore } from "../game/score";
 import type { Rank } from "../game/score";
-import { ALL_STAGES } from "../game/stages";
 import { samePos } from "../game/types";
 import type { Position, Stage } from "../game/types";
+import { recordClear, stageKeyFor } from "./progress";
 
 export type GameStatus = "playing" | "cleared" | "failed";
 
@@ -14,7 +14,7 @@ export interface GameResult {
 }
 
 export interface GameState {
-  stageIdx: number;
+  stage: Stage;
   pos: Position;
   steps: number;
   visited: Position[];
@@ -34,20 +34,19 @@ export interface GameState {
 }
 
 type Action =
-  | { type: "select"; idx: number }
+  | { type: "select"; stage: Stage }
   | { type: "reset" }
   | { type: "move"; dr: number; dc: number }
   | { type: "clearWarpFlash" };
 
-export function initState(stageIdx: number): GameState {
-  const stage = ALL_STAGES[stageIdx];
+export function initState(stage: Stage): GameState {
   // 行・列進入回数は start の分を先に加算しておく(start マスも「進入」の1回として数える)
   const rowUsed = Array<number>(stage.size).fill(0);
   const colUsed = Array<number>(stage.size).fill(0);
   rowUsed[stage.start[0]] = 1;
   colUsed[stage.start[1]] = 1;
   return {
-    stageIdx,
+    stage,
     pos: stage.start,
     steps: 0,
     visited: [stage.start],
@@ -116,14 +115,14 @@ function hasLegalMove(stage: Stage, state: GameState, pos: Position): boolean {
 export function reduce(state: GameState, action: Action): GameState {
   switch (action.type) {
     case "select":
-      return initState(action.idx);
+      return initState(action.stage);
     case "reset":
-      return initState(state.stageIdx);
+      return initState(state.stage);
     case "clearWarpFlash":
       return { ...state, lastWarp: null };
     case "move": {
       if (state.status !== "playing") return state;
-      const stage = ALL_STAGES[state.stageIdx];
+      const stage = state.stage;
       const [r, c] = state.pos;
       const key = DIR_KEYS[`${action.dr},${action.dc}` as keyof typeof DIR_KEYS];
       if (!key || !stage.grid[r][c][key]) return state;
@@ -204,19 +203,26 @@ export function reduce(state: GameState, action: Action): GameState {
   }
 }
 
-export function useGame() {
-  const [state, dispatch] = useReducer(reduce, 0, initState);
-  const stage = ALL_STAGES[state.stageIdx];
+export function useGame(initialStage: Stage) {
+  const [state, dispatch] = useReducer(reduce, initialStage, initState);
+  const stage = state.stage;
 
   const move = useCallback((dr: number, dc: number) => dispatch({ type: "move", dr, dc }), []);
   const reset = useCallback(() => dispatch({ type: "reset" }), []);
-  const selectStage = useCallback((idx: number) => dispatch({ type: "select", idx }), []);
+  const selectStage = useCallback((stage: Stage) => dispatch({ type: "select", stage }), []);
 
   useEffect(() => {
     if (!state.lastWarp) return;
     const timer = setTimeout(() => dispatch({ type: "clearWarpFlash" }), 400);
     return () => clearTimeout(timer);
   }, [state.lastWarp]);
+
+  // クリア達成時に進捗を保存する(フリープレイは stageKeyFor が null を返すため保存されない)
+  useEffect(() => {
+    if (state.status !== "cleared" || !state.result) return;
+    const key = stageKeyFor(state.stage);
+    if (key) recordClear(key, state.result.score, state.result.rank.label);
+  }, [state.status, state.result, state.stage]);
 
   return { state, stage, move, reset, selectStage };
 }

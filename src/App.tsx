@@ -4,18 +4,23 @@ import { DPad } from "./components/DPad";
 import { GUTTER, boardPx } from "./components/boardMetrics";
 import { MazeCanvas } from "./components/MazeCanvas";
 import { ResultOverlay } from "./components/ResultOverlay";
-import { StageTabs } from "./components/StageTabs";
+import { StageSelect } from "./components/StageSelect";
 import { StatsPanel } from "./components/StatsPanel";
+import { buildFreePlayStage, freePlayDifficultyOf, randomSeed } from "./game/generator";
 import { blockCells } from "./game/metrics";
 import { findRouteThrough } from "./game/solver";
-import { ALL_STAGES } from "./game/stages";
+import { STAGES } from "./game/stages";
+import type { Stage } from "./game/types";
 import { useGame } from "./hooks/useGame";
 
+type View = "select" | "play";
+
 export default function App() {
-  const { state, stage, move, reset, selectStage } = useGame();
+  const [view, setView] = useState<View>("select");
+  const { state, stage, move, reset, selectStage } = useGame(STAGES[0]);
   const [showHint, setShowHint] = useState(false);
 
-  useEffect(() => setShowHint(false), [state.stageIdx]);
+  useEffect(() => setShowHint(false), [state.stage]);
 
   // 爆弾ありステージでは、爆弾マスを塞いだグリッドでヒント探索する(爆弾を通るヒントを出さないため)
   const hintGrid = useMemo(
@@ -42,6 +47,7 @@ export default function App() {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (view !== "play") return;
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) e.preventDefault();
       if (e.key === "ArrowUp" || e.key === "w") move(-1, 0);
       if (e.key === "ArrowDown" || e.key === "s") move(1, 0);
@@ -50,10 +56,35 @@ export default function App() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [move]);
+  }, [move, view]);
 
   // lineLimits ステージは MazeCanvas 側もガター分だけ広く描画するため、幅を揃える
   const widthPx = boardPx(stage.size) + (stage.lineLimits ? GUTTER : 0);
+
+  const handleSelectStage = (s: Stage) => {
+    selectStage(s);
+    setView("play");
+  };
+
+  const handleBackToSelect = () => setView("select");
+
+  // NEXT は手作りステージ(STAGES)の連番のみ対象。デイリー・フリープレイでは非表示にする
+  const handcraftedIdx = STAGES.findIndex((s) => s.id === stage.id);
+  const hasNext = handcraftedIdx >= 0 && handcraftedIdx < STAGES.length - 1;
+  const handleNext = () => {
+    if (hasNext) handleSelectStage(STAGES[handcraftedIdx + 1]);
+  };
+
+  // フリープレイをプレイ中なら、クリア後に同難易度・新シードで再生成できるようにする
+  const freePlayDifficulty = freePlayDifficultyOf(stage.id);
+  const handleRegenerate = () => {
+    if (!freePlayDifficulty) return;
+    selectStage(buildFreePlayStage(freePlayDifficulty, randomSeed()));
+  };
+
+  if (view === "select") {
+    return <StageSelect onSelect={handleSelectStage} />;
+  }
 
   return (
     <div className="app">
@@ -65,7 +96,6 @@ export default function App() {
         </div>
       </header>
 
-      <StageTabs stages={ALL_STAGES} currentIdx={state.stageIdx} onSelect={selectStage} />
       <StatsPanel steps={state.steps} par={stage.par} limit={stage.limit} widthPx={widthPx} />
       <CheckpointList checkpoints={stage.checkpoints} cpDone={state.cpDone} />
 
@@ -86,6 +116,7 @@ export default function App() {
       <DPad onMove={move} />
 
       <div className="actions">
+        <button onClick={handleBackToSelect} className="action-btn">BACK</button>
         <button onClick={reset} className="action-btn">RESET</button>
         <button
           onClick={() => setShowHint((h) => !h)}
@@ -110,9 +141,12 @@ export default function App() {
         status={state.status}
         result={state.result}
         stage={stage}
-        hasNext={state.stageIdx < ALL_STAGES.length - 1}
+        hasNext={hasNext}
+        isFreePlay={freePlayDifficulty !== null}
         onRetry={reset}
-        onNext={() => selectStage(state.stageIdx + 1)}
+        onNext={handleNext}
+        onRegenerate={handleRegenerate}
+        onBackToSelect={handleBackToSelect}
       />
     </div>
   );
