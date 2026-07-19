@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { generateMaze } from "./maze";
-import { findPath, findRouteThrough } from "./solver";
+import { findPath, findRouteThrough, routeCost } from "./solver";
 import type { Grid, Position } from "./types";
 
 /** 全マス開通の size×size グリッド(壁なし)を作る */
@@ -51,6 +51,62 @@ describe("findPath", () => {
       [0, 0],
       [4, 0],
     ]);
+  });
+
+  it("heavy 未指定なら従来どおり最短経路になる", () => {
+    const size = 10;
+    const grid = generateMaze(size, 42);
+    const withDefault = findPath(grid, size, [0, 0], [size - 1, size - 1]);
+    const withEmptyHeavy = findPath(grid, size, [0, 0], [size - 1, size - 1], [], []);
+    expect(withEmptyHeavy).toEqual(withDefault);
+  });
+
+  it("heavy マスを避けた方が安ければ迂回経路を選ぶ", () => {
+    // 2x2 の全開通グリッド: (0,0)⇄(0,1)⇄(1,1)⇄(1,0)⇄(0,0) の環状路。
+    // (0,0)→(1,1) の直行路は (0,1) 経由・(1,0) 経由のどちらも2歩で同コスト。
+    // (0,1) を heavy にすると直行路のコストが3になり、(1,0) 経由(コスト2)の方が安くなる。
+    const grid = openGrid(2);
+    const path = findPath(grid, 2, [0, 0], [1, 1], [], [[0, 1]]);
+    expect(path).toEqual([
+      [0, 0],
+      [1, 0],
+      [1, 1],
+    ]);
+    expect(routeCost(path!, [[0, 1]])).toBe(2);
+  });
+
+  it("迂回路がなければ heavy マスをそのまま踏む経路になる", () => {
+    // 0行目だけが一直線につながった廊下(他マスとは非接続)。迂回のしようがない。
+    const empty = { n: false, s: false, e: false, w: false };
+    const grid: Grid = [
+      [
+        { ...empty, e: true },
+        { ...empty, e: true, w: true },
+        { ...empty, w: true },
+      ],
+      [{ ...empty }, { ...empty }, { ...empty }],
+      [{ ...empty }, { ...empty }, { ...empty }],
+    ];
+    const path = findPath(grid, 3, [0, 0], [0, 2], [], [[0, 1]]);
+    expect(path).toEqual([
+      [0, 0],
+      [0, 1],
+      [0, 2],
+    ]);
+  });
+});
+
+describe("routeCost", () => {
+  it("heavy マスの分だけコストが加算される", () => {
+    const path: Position[] = [
+      [0, 0],
+      [0, 1],
+      [0, 2],
+      [0, 3],
+    ];
+    expect(routeCost(path, [])).toBe(3);
+    expect(routeCost(path, [[0, 2]])).toBe(4);
+    expect(routeCost(path, [[0, 1], [0, 3]])).toBe(5);
   });
 });
 

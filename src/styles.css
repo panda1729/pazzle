@@ -205,6 +205,9 @@ button {
 .legend-warp {
   color: #4a3a70;
 }
+.legend-heavy {
+  color: #8a6212;
+}
 .key-help {
   font-size: 7px;
   letter-spacing: 2px;

@@ -31,7 +31,7 @@ type Action =
   | { type: "move"; dr: number; dc: number }
   | { type: "clearWarpFlash" };
 
-function initState(stageIdx: number): GameState {
+export function initState(stageIdx: number): GameState {
   const stage = STAGES[stageIdx];
   return {
     stageIdx,
@@ -47,7 +47,7 @@ function initState(stageIdx: number): GameState {
 
 const DIR_KEYS = { "-1,0": "n", "1,0": "s", "0,1": "e", "0,-1": "w" } as const;
 
-function reduce(state: GameState, action: Action): GameState {
+export function reduce(state: GameState, action: Action): GameState {
   switch (action.type) {
     case "select":
       return initState(action.idx);
@@ -68,7 +68,9 @@ function reduce(state: GameState, action: Action): GameState {
       if (warp) [nr, nc] = warp.to;
 
       const pos: Position = [nr, nc];
-      const steps = state.steps + 1;
+      // 着地マス(ワープ後なら着地先)が2倍マスなら歩数を+2、そうでなければ+1
+      const isHeavy = stage.heavyCells.some((h) => samePos(h, pos));
+      const steps = state.steps + (isHeavy ? 2 : 1);
       const cpDone = state.cpDone.map((done, i) => {
         const cp = stage.checkpoints[i];
         return done || (cp.row === nr && cp.col === nc);

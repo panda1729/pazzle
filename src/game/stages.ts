@@ -1,5 +1,5 @@
 import { generateMaze } from "./maze";
-import { findRouteThrough } from "./solver";
+import { findRouteThrough, routeCost } from "./solver";
 import type { Stage, StageDef } from "./types";
 
 export const STAGE_DEFS: StageDef[] = [
@@ -36,15 +36,40 @@ export const STAGE_DEFS: StageDef[] = [
     checkpoints: [],
     warps: [{ from: [0, 4], to: [4, 0] }],
   },
+  {
+    id: 4,
+    label: "STAGE 04",
+    desc: "HEAVY",
+    size: 5,
+    seed: 21,
+    start: [0, 0],
+    goal: [4, 4],
+    checkpoints: [],
+    warps: [],
+    heavyCells: [
+      [1, 1],
+      [0, 4],
+      [4, 1],
+    ],
+  },
 ];
 
-/** par はソルバーによる最短手数から自動算出し、limit はその2倍とする */
+/** par はソルバーによる最小コストから自動算出し、limit はその2倍とする */
 export function buildStage(def: StageDef): Stage {
   const grid = generateMaze(def.size, def.seed);
-  const route = findRouteThrough(grid, def.size, def.start, def.goal, def.checkpoints, def.warps);
+  const heavyCells = def.heavyCells ?? [];
+  const route = findRouteThrough(
+    grid,
+    def.size,
+    def.start,
+    def.goal,
+    def.checkpoints,
+    def.warps,
+    heavyCells,
+  );
   if (!route) throw new Error(`Stage ${def.id}: ゴールに到達できない迷路定義です`);
-  const par = route.length - 1;
-  return { ...def, grid, par, limit: par * 2 };
+  const par = routeCost(route, heavyCells);
+  return { ...def, grid, par, limit: par * 2, heavyCells };
 }
 
 export const STAGES: Stage[] = STAGE_DEFS.map(buildStage);

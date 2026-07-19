@@ -33,6 +33,8 @@ export interface StageDef {
   goal: Position;
   checkpoints: Checkpoint[];
   warps: Warp[];
+  /** 踏むと歩数カウントが+2になるマス */
+  heavyCells?: Position[];
 }
 
 /** 定義から生成された、プレイ可能なステージ */
@@ -42,6 +44,7 @@ export interface Stage extends StageDef {
   par: number;
   /** この手数に達したら失敗 */
   limit: number;
+  heavyCells: Position[];
 }
 
 export const samePos = (a: Position, b: Position): boolean =>

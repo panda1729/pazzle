@@ -20,7 +20,15 @@ export default function App() {
   const hintPath = useMemo(() => {
     if (!showHint || state.status !== "playing") return null;
     const remaining = stage.checkpoints.filter((_, i) => !state.cpDone[i]);
-    return findRouteThrough(stage.grid, stage.size, state.pos, stage.goal, remaining, stage.warps);
+    return findRouteThrough(
+      stage.grid,
+      stage.size,
+      state.pos,
+      stage.goal,
+      remaining,
+      stage.warps,
+      stage.heavyCells,
+    );
   }, [showHint, state.status, state.pos, state.cpDone, stage]);
 
   useEffect(() => {
@@ -77,6 +85,7 @@ export default function App() {
         <span className="legend-goal">GOAL</span>
         <span className="legend-cp">CHECKPOINT</span>
         <span className="legend-warp">WARP</span>
+        <span className="legend-heavy">×2</span>
       </div>
       <div className="key-help">ARROW KEYS / WASD</div>
 

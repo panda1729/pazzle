@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { findRouteThrough, routeCost } from "./solver";
 import { STAGES } from "./stages";
 import { samePos } from "./types";
 
@@ -33,6 +34,33 @@ describe("STAGES", () => {
           expect(samePos(warp.from, [cp.row, cp.col])).toBe(false);
         }
       }
+    }
+  });
+
+  it("STAGE 04(HEAVY)が含まれ、heavyCells が start / goal と重ならない", () => {
+    const stage = STAGES.find((s) => s.id === 4);
+    expect(stage).toBeDefined();
+    expect(stage!.desc).toBe("HEAVY");
+    expect(stage!.heavyCells.length).toBeGreaterThan(0);
+    for (const h of stage!.heavyCells) {
+      expect(samePos(h, stage!.start)).toBe(false);
+      expect(samePos(h, stage!.goal)).toBe(false);
+    }
+  });
+
+  it("par は routeCost(最小コスト経路, heavyCells) と一致する", () => {
+    for (const stage of STAGES) {
+      const route = findRouteThrough(
+        stage.grid,
+        stage.size,
+        stage.start,
+        stage.goal,
+        stage.checkpoints,
+        stage.warps,
+        stage.heavyCells,
+      );
+      expect(route).not.toBeNull();
+      expect(stage.par).toBe(routeCost(route!, stage.heavyCells));
     }
   });
 });
