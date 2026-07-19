@@ -8,3 +8,9 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+# Node
+node_modules/
+dist/
+*.local
+npm-debug.log*
