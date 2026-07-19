@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { findRouteThrough, routeCost } from "./solver";
 import { buildStage, STAGES } from "./stages";
 import { samePos } from "./types";
-import type { StageDef } from "./types";
+import type { Position, StageDef } from "./types";
 
 describe("STAGES", () => {
   it("全ステージがクリア可能で par/limit が算出されている", () => {
@@ -124,6 +124,46 @@ describe("STAGES", () => {
       for (let c = 0; c < stage!.size; c++) {
         if (c + 1 < stage!.size) expect(stage!.grid[r][c].e).toBe(true);
         if (r + 1 < stage!.size) expect(stage!.grid[r][c].s).toBe(true);
+      }
+    }
+  });
+
+  it("STAGE 07(MIXED)が含まれ、ギミックが規定数以上・par が 25 以上", () => {
+    const stage = STAGES.find((s) => s.id === 7);
+    expect(stage).toBeDefined();
+    expect(stage!.desc).toBe("MIXED");
+    expect(stage!.checkpoints.length).toBe(2);
+    expect(stage!.warps.length).toBeGreaterThanOrEqual(1);
+    expect(stage!.heavyCells.length).toBeGreaterThanOrEqual(2);
+    expect(stage!.crumbleCells.length).toBeGreaterThanOrEqual(1);
+    expect(stage!.par).toBeGreaterThanOrEqual(25);
+  });
+
+  it("STAGE 08(EXTREME)が含まれ、ギミックが規定数以上・par が 45 以上", () => {
+    const stage = STAGES.find((s) => s.id === 8);
+    expect(stage).toBeDefined();
+    expect(stage!.desc).toBe("EXTREME");
+    expect(stage!.checkpoints.length).toBe(3);
+    expect(stage!.warps.length).toBeGreaterThanOrEqual(1);
+    expect(stage!.heavyCells.length).toBeGreaterThanOrEqual(3);
+    expect(stage!.crumbleCells.length).toBeGreaterThanOrEqual(2);
+    expect(stage!.par).toBeGreaterThanOrEqual(45);
+  });
+
+  it("全ステージで、特殊マス(start/goal/checkpoints/warp from・to/heavy/crumble)が互いに重複していない", () => {
+    for (const stage of STAGES) {
+      const cells: Position[] = [
+        stage.start,
+        stage.goal,
+        ...stage.checkpoints.map((cp): Position => [cp.row, cp.col]),
+        ...stage.warps.flatMap((w) => [w.from, w.to]),
+        ...stage.heavyCells,
+        ...stage.crumbleCells.map((c) => c.pos),
+      ];
+      for (let i = 0; i < cells.length; i++) {
+        for (let j = i + 1; j < cells.length; j++) {
+          expect(samePos(cells[i], cells[j])).toBe(false);
+        }
       }
     }
   });
