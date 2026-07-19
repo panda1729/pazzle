@@ -47,3 +47,28 @@ export function generateMaze(size: number, seed: number): Grid {
 
   return grid;
 }
+
+/**
+ * 内壁を全て取り払った size×size のオープングリッドを返す(外周は閉じたまま)。
+ * 一筆書きモード用: 通常の迷路(木構造)は全マス一筆書きがほぼ不可能なため使用する。
+ */
+export function generateOpenGrid(size: number): Grid {
+  const grid: Grid = Array.from({ length: size }, () =>
+    Array.from({ length: size }, () => ({ n: false, s: false, e: false, w: false })),
+  );
+
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (r > 0) {
+        grid[r][c].n = true;
+        grid[r - 1][c].s = true;
+      }
+      if (c > 0) {
+        grid[r][c].w = true;
+        grid[r][c - 1].e = true;
+      }
+    }
+  }
+
+  return grid;
+}

@@ -42,6 +42,8 @@ export interface StageDef {
   heavyCells?: Position[];
   /** 指定回数までしか踏めない床 */
   crumbleCells?: CrumbleCell[];
+  /** 一筆書きモード(全マスをちょうど1回ずつ踏破してゴールする)か */
+  oneStroke?: boolean;
 }
 
 /** 定義から生成された、プレイ可能なステージ */
@@ -53,6 +55,7 @@ export interface Stage extends StageDef {
   limit: number;
   heavyCells: Position[];
   crumbleCells: CrumbleCell[];
+  oneStroke: boolean;
 }
 
 export const samePos = (a: Position, b: Position): boolean =>

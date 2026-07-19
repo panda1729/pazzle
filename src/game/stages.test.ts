@@ -8,7 +8,8 @@ describe("STAGES", () => {
   it("全ステージがクリア可能で par/limit が算出されている", () => {
     for (const stage of STAGES) {
       expect(stage.par).toBeGreaterThan(0);
-      expect(stage.limit).toBe(stage.par * 2);
+      // 一筆書きモードは再訪不可のため limit === par、それ以外は par の2倍
+      expect(stage.limit).toBe(stage.oneStroke ? stage.par : stage.par * 2);
     }
   });
 
@@ -49,8 +50,9 @@ describe("STAGES", () => {
     }
   });
 
-  it("par は routeCost(最小コスト経路, heavyCells) と一致する", () => {
+  it("par は routeCost(最小コスト経路, heavyCells) と一致する(一筆書きステージを除く)", () => {
     for (const stage of STAGES) {
+      if (stage.oneStroke) continue; // 一筆書きはソルバーを使わないため対象外
       const route = findRouteThrough(
         stage.grid,
         stage.size,
@@ -109,5 +111,45 @@ describe("STAGES", () => {
       ],
     };
     expect(() => buildStage(invalidDef)).toThrow();
+  });
+
+  it("STAGE 06(ONE STROKE)が含まれ、par=24, limit=24 で全内壁が開通している", () => {
+    const stage = STAGES.find((s) => s.id === 6);
+    expect(stage).toBeDefined();
+    expect(stage!.desc).toBe("ONE STROKE");
+    expect(stage!.oneStroke).toBe(true);
+    expect(stage!.par).toBe(24);
+    expect(stage!.limit).toBe(24);
+    for (let r = 0; r < stage!.size; r++) {
+      for (let c = 0; c < stage!.size; c++) {
+        if (c + 1 < stage!.size) expect(stage!.grid[r][c].e).toBe(true);
+        if (r + 1 < stage!.size) expect(stage!.grid[r][c].s).toBe(true);
+      }
+    }
+  });
+
+  it("oneStroke: true と他のギミック(checkpoints/warps/heavyCells/crumbleCells)を併用する定義は throw", () => {
+    const base: Omit<StageDef, "checkpoints" | "warps" | "heavyCells" | "crumbleCells"> = {
+      id: 999,
+      label: "INVALID",
+      desc: "TEST",
+      size: 5,
+      seed: 0,
+      start: [0, 0],
+      goal: [4, 4],
+      oneStroke: true,
+    };
+    expect(() =>
+      buildStage({ ...base, checkpoints: [{ row: 2, col: 2 }], warps: [] }),
+    ).toThrow();
+    expect(() =>
+      buildStage({ ...base, checkpoints: [], warps: [{ from: [0, 4], to: [4, 0] }] }),
+    ).toThrow();
+    expect(() =>
+      buildStage({ ...base, checkpoints: [], warps: [], heavyCells: [[1, 1]] }),
+    ).toThrow();
+    expect(() =>
+      buildStage({ ...base, checkpoints: [], warps: [], crumbleCells: [{ pos: [1, 1], uses: 1 }] }),
+    ).toThrow();
   });
 });

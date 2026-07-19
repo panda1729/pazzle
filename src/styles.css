@@ -187,6 +187,10 @@ button {
   border-color: #cc4444;
   color: #cc4444;
 }
+.action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
 /* ── Legend ── */
 .legend {

@@ -1,4 +1,4 @@
-import { generateMaze } from "./maze";
+import { generateMaze, generateOpenGrid } from "./maze";
 import { findRouteThrough, routeCost } from "./solver";
 import { samePos } from "./types";
 import type { Stage, StageDef } from "./types";
@@ -68,13 +68,44 @@ export const STAGE_DEFS: StageDef[] = [
       { pos: [1, 2], uses: 2 },
     ],
   },
+  {
+    id: 6,
+    label: "STAGE 06",
+    desc: "ONE STROKE",
+    size: 5,
+    seed: 0, // 未使用(オープングリッドは seed に依存しない)
+    start: [0, 0],
+    goal: [4, 4],
+    checkpoints: [],
+    warps: [],
+    oneStroke: true,
+  },
 ];
 
 /** par はソルバーによる最小コストから自動算出し、limit はその2倍とする */
 export function buildStage(def: StageDef): Stage {
-  const grid = generateMaze(def.size, def.seed);
   const heavyCells = def.heavyCells ?? [];
   const crumbleCells = def.crumbleCells ?? [];
+  const oneStroke = def.oneStroke ?? false;
+
+  if (oneStroke) {
+    // 一筆書きモードは他ギミックと併用しない(全マス踏破の判定がシンプルでなくなるため)
+    if (
+      def.checkpoints.length > 0 ||
+      def.warps.length > 0 ||
+      heavyCells.length > 0 ||
+      crumbleCells.length > 0
+    ) {
+      throw new Error(`Stage ${def.id}: 一筆書きモードは他のギミックと併用できません`);
+    }
+    // 通常の迷路(木構造)は全マス一筆書きがほぼ不可能なので、内壁のないオープングリッドを使う
+    const grid = generateOpenGrid(def.size);
+    // 再訪不可なので歩数は「全マス数-1」を超えられず、par もそれと一致する
+    const par = def.size * def.size - 1;
+    return { ...def, grid, par, limit: par, heavyCells, crumbleCells, oneStroke };
+  }
+
+  const grid = generateMaze(def.size, def.seed);
 
   // crumble マスが start と重ならないかチェック
   for (const crumble of crumbleCells) {
@@ -105,7 +136,7 @@ export function buildStage(def: StageDef): Stage {
   }
 
   const par = routeCost(route, heavyCells);
-  return { ...def, grid, par, limit: par * 2, heavyCells, crumbleCells };
+  return { ...def, grid, par, limit: par * 2, heavyCells, crumbleCells, oneStroke };
 }
 
 export const STAGES: Stage[] = STAGE_DEFS.map(buildStage);

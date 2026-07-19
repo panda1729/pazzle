@@ -50,6 +50,14 @@ export function initState(stageIdx: number): GameState {
 
 const DIR_KEYS = { "-1,0": "n", "1,0": "s", "0,1": "e", "0,-1": "w" } as const;
 
+/** 隣接4マスを走査するための方向定義(一筆書きモードの詰み判定に使う) */
+const NEIGHBOR_DIRS: { dr: number; dc: number; key: "n" | "s" | "e" | "w" }[] = [
+  { dr: -1, dc: 0, key: "n" },
+  { dr: 1, dc: 0, key: "s" },
+  { dr: 0, dc: 1, key: "e" },
+  { dr: 0, dc: -1, key: "w" },
+];
+
 export function reduce(state: GameState, action: Action): GameState {
   switch (action.type) {
     case "select":
@@ -71,6 +79,11 @@ export function reduce(state: GameState, action: Action): GameState {
       if (warp) [nr, nc] = warp.to;
 
       const pos: Position = [nr, nc];
+
+      // 一筆書きモード: 訪問済みマスへの移動は壁と同じ扱いでブロック(歩数も増えない)
+      if (stage.oneStroke && state.visited.some((v) => samePos(v, pos))) {
+        return state;
+      }
 
       // 着地マスが崩れる床で、残回数が 0 なら移動をブロック
       const crumbleIdx = stage.crumbleCells.findIndex((c) => samePos(c.pos, pos));
@@ -101,6 +114,23 @@ export function reduce(state: GameState, action: Action): GameState {
         lastWarp: warp ? pos : null,
         crumbleLeft,
       };
+
+      if (stage.oneStroke) {
+        // クリア判定: ゴールに到達し、かつ全マスを踏破している
+        if (samePos(pos, stage.goal) && next.visited.length === stage.size * stage.size) {
+          const score = calcScore(steps, stage.par, stage.limit);
+          return { ...next, status: "cleared", result: { score, rank: calcRank(score), steps } };
+        }
+        // 詰み判定: 現在地から移動できる(壁がなく未訪問の)隣接マスが1つもなければ失敗
+        const [pr, pc] = pos;
+        const hasMove = NEIGHBOR_DIRS.some(({ dr, dc, key }) => {
+          if (!stage.grid[pr][pc][key]) return false;
+          const npos: Position = [pr + dr, pc + dc];
+          return !next.visited.some((v) => samePos(v, npos));
+        });
+        if (!hasMove) return { ...next, status: "failed" };
+        return next;
+      }
 
       if (samePos(pos, stage.goal) && cpDone.every(Boolean)) {
         const score = calcScore(steps, stage.par, stage.limit);

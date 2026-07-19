@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generateMaze } from "./maze";
+import { generateMaze, generateOpenGrid } from "./maze";
 import type { Grid } from "./types";
 
 function reachableCount(grid: Grid, size: number): number {
@@ -67,5 +67,35 @@ describe("generateMaze", () => {
 
   it("大きな迷路でもスタックオーバーフローしない", () => {
     expect(() => generateMaze(100, 1)).not.toThrow();
+  });
+});
+
+describe("generateOpenGrid", () => {
+  it("全ての内壁が開通している", () => {
+    const size = 5;
+    const grid = generateOpenGrid(size);
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        if (c + 1 < size) {
+          expect(grid[r][c].e).toBe(true);
+          expect(grid[r][c + 1].w).toBe(true);
+        }
+        if (r + 1 < size) {
+          expect(grid[r][c].s).toBe(true);
+          expect(grid[r + 1][c].n).toBe(true);
+        }
+      }
+    }
+  });
+
+  it("外周は閉じている", () => {
+    const size = 5;
+    const grid = generateOpenGrid(size);
+    for (let i = 0; i < size; i++) {
+      expect(grid[0][i].n).toBe(false);
+      expect(grid[size - 1][i].s).toBe(false);
+      expect(grid[i][0].w).toBe(false);
+      expect(grid[i][size - 1].e).toBe(false);
+    }
   });
 });
