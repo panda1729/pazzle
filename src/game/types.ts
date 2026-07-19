@@ -50,6 +50,11 @@ export interface StageDef {
   braid?: number;
   /** 各行・各列に「進入できる回数」の上限を設けるイラストロジック風の制限 */
   lineLimits?: { rows: number[]; cols: number[] } | null;
+  /**
+   * generateStageDef に渡された元の seed(内部の迷路生成用 subSeed とは別物)。
+   * デイリー・フリープレイの共有URL復元(hooks/share.ts)に使う。手作りステージでは undefined
+   */
+  originalSeed?: number;
 }
 
 /** 定義から生成された、プレイ可能なステージ */

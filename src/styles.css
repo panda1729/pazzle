@@ -222,6 +222,8 @@ button {
 /* ── Actions ── */
 .actions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 7px;
   margin-top: 10px;
 }

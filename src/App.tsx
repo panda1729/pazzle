@@ -11,16 +11,48 @@ import { blockCells } from "./game/metrics";
 import { findRouteThrough } from "./game/solver";
 import { STAGES } from "./game/stages";
 import type { Stage } from "./game/types";
+import { buildShareUrl, parseStageParams, stageToParams } from "./hooks/share";
 import { useGame } from "./hooks/useGame";
 
 type View = "select" | "play";
 
 export default function App() {
-  const [view, setView] = useState<View>("select");
-  const { state, stage, move, reset, selectStage } = useGame(STAGES[0]);
+  // URL(location.search)にステージが指定されていれば、選択画面を経由せずその場で開始する
+  // (useState の遅延初期化なので初回マウント時にのみ評価される)
+  const [urlStage] = useState<Stage | null>(() => parseStageParams(window.location.search));
+  const [view, setView] = useState<View>(urlStage ? "play" : "select");
+  const { state, stage, move, reset, selectStage } = useGame(urlStage ?? STAGES[0]);
   const [showHint, setShowHint] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   useEffect(() => setShowHint(false), [state.stage]);
+  useEffect(() => setLinkCopied(false), [state.stage]);
+
+  // ステージ選択画面に戻ったらクエリを除去し、プレイ中は現在のステージに URL クエリを同期する。
+  // pushState ではなく replaceState を使い、ステージ遷移のたびに履歴を汚さないようにする
+  useEffect(() => {
+    const params = view === "play" ? stageToParams(stage) : null;
+    const url = params ? `${window.location.pathname}?${params}` : window.location.pathname;
+    window.history.replaceState(null, "", url);
+  }, [view, stage]);
+
+  // COPY LINK ボタン用の共有URL。stageToParams が null(復元不能)なステージでは非表示にする
+  const shareUrl = useMemo(
+    () => buildShareUrl(`${window.location.origin}${window.location.pathname}`, stage),
+    [stage],
+  );
+  const handleCopyLink = () => {
+    if (!shareUrl) return;
+    navigator.clipboard
+      .writeText(shareUrl)
+      .then(() => {
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 2000);
+      })
+      .catch(() => {
+        // クリップボードが使えない環境でも UI は壊さない
+      });
+  };
 
   // 爆弾ありステージでは、爆弾マスを塞いだグリッドでヒント探索する(爆弾を通るヒントを出さないため)
   const hintGrid = useMemo(
@@ -125,6 +157,11 @@ export default function App() {
         >
           HINT {showHint ? "ON" : "OFF"}
         </button>
+        {shareUrl && (
+          <button onClick={handleCopyLink} className={`action-btn${linkCopied ? " is-primary" : ""}`}>
+            {linkCopied ? "COPIED" : "COPY LINK"}
+          </button>
+        )}
       </div>
 
       <div className="legend">
@@ -141,6 +178,8 @@ export default function App() {
         status={state.status}
         result={state.result}
         stage={stage}
+        steps={state.steps}
+        shareUrl={shareUrl}
         hasNext={hasNext}
         isFreePlay={freePlayDifficulty !== null}
         onRetry={reset}
