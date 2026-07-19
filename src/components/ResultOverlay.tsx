@@ -5,12 +5,27 @@ interface Props {
   status: GameStatus;
   result: GameResult | null;
   stage: Stage;
+  /** 次の手作りステージが存在する(手作りステージをプレイ中の場合のみ)か */
   hasNext: boolean;
+  /** フリープレイをプレイ中か(同難易度・新シードでの再生成ボタンを出すかどうか) */
+  isFreePlay: boolean;
   onRetry: () => void;
   onNext: () => void;
+  onRegenerate: () => void;
+  onBackToSelect: () => void;
 }
 
-export function ResultOverlay({ status, result, stage, hasNext, onRetry, onNext }: Props) {
+export function ResultOverlay({
+  status,
+  result,
+  stage,
+  hasNext,
+  isFreePlay,
+  onRetry,
+  onNext,
+  onRegenerate,
+  onBackToSelect,
+}: Props) {
   if (status === "playing") return null;
 
   if (status === "failed") {
@@ -19,7 +34,10 @@ export function ResultOverlay({ status, result, stage, hasNext, onRetry, onNext 
         <div className="overlay-box">
           <div className="overlay-title">LIMIT EXCEEDED</div>
           <div className="overlay-rank is-fail">F</div>
-          <button onClick={onRetry} className="action-btn is-danger">RETRY</button>
+          <div className="overlay-actions">
+            <button onClick={onRetry} className="action-btn is-danger">RETRY</button>
+            <button onClick={onBackToSelect} className="action-btn">STAGE LIST</button>
+          </div>
         </div>
       </div>
     );
@@ -44,6 +62,10 @@ export function ResultOverlay({ status, result, stage, hasNext, onRetry, onNext 
           {hasNext && (
             <button onClick={onNext} className="action-btn is-primary">NEXT ▶</button>
           )}
+          {isFreePlay && (
+            <button onClick={onRegenerate} className="action-btn is-primary">NEW SEED</button>
+          )}
+          <button onClick={onBackToSelect} className="action-btn">STAGE LIST</button>
         </div>
       </div>
     </div>

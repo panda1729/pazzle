@@ -42,10 +42,14 @@ export interface StageDef {
   heavyCells?: Position[];
   /** 指定回数までしか踏めない床 */
   crumbleCells?: CrumbleCell[];
+  /** 見えない爆弾マス。踏むと即失敗。8近傍のマスには隣接数が常時表示される */
+  bombs?: Position[];
   /** 一筆書きモード(全マスをちょうど1回ずつ踏破してゴールする)か */
   oneStroke?: boolean;
   /** 0〜1。行き止まりを確率的に壊してループ(閉路)を作り、ルート選択を生む度合い */
   braid?: number;
+  /** 各行・各列に「進入できる回数」の上限を設けるイラストロジック風の制限 */
+  lineLimits?: { rows: number[]; cols: number[] } | null;
 }
 
 /** 定義から生成された、プレイ可能なステージ */
@@ -57,8 +61,11 @@ export interface Stage extends StageDef {
   limit: number;
   heavyCells: Position[];
   crumbleCells: CrumbleCell[];
+  bombs: Position[];
   oneStroke: boolean;
   braid: number;
+  /** 未設定なら null に正規化される */
+  lineLimits: { rows: number[]; cols: number[] } | null;
 }
 
 export const samePos = (a: Position, b: Position): boolean =>

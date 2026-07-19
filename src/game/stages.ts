@@ -1,5 +1,4 @@
 import { buildStage } from "./build";
-import { buildDailyStage } from "./generator";
 import type { Stage, StageDef } from "./types";
 
 // buildStage は build.ts に定義されているが、既存コード(テスト含む)との互換のため
@@ -147,9 +146,48 @@ export const STAGE_DEFS: StageDef[] = [
       { pos: [8, 3], uses: 1 },
     ],
   },
+  {
+    id: 9,
+    label: "STAGE 09",
+    desc: "BOMB",
+    size: 7,
+    seed: 4,
+    // braid でループを作り、爆弾を避ける迂回ルートを選べるようにする(他ギミックなしの純粋推理ステージ)
+    braid: 0.4,
+    start: [0, 0],
+    goal: [6, 6],
+    checkpoints: [],
+    warps: [],
+    // 最適経路(par=18)のすぐ脇(チェビシェフ距離1)に固めて配置。start の8近傍には置かない
+    bombs: [
+      [2, 1],
+      [2, 2],
+      [2, 3],
+      [2, 4],
+      [3, 4],
+      [4, 4],
+    ],
+  },
+  {
+    id: 10,
+    label: "STAGE 10",
+    desc: "LINE LIMIT",
+    size: 7,
+    seed: 52,
+    // braid でループを作り、行列制限を守りながらの迂回選択を生む(他ギミックなしの純粋推理ステージ)
+    braid: 0.4,
+    start: [0, 0],
+    goal: [6, 6],
+    checkpoints: [],
+    warps: [],
+    // 最適経路(par=22)の行・列進入回数(rows=[4,3,2,4,4,3,3] / cols=[1,2,2,5,5,4,4])を実測し、
+    // 行0・2・4と列0・3・5・6の計7本はその回数ぴったり(タイト)、残り7本は+1の余裕を持たせた。
+    // イラストロジックのように「どの行・列で寄り道してよいか」を残り回数から逆算させる設計
+    lineLimits: {
+      rows: [4, 4, 2, 5, 4, 4, 4],
+      cols: [1, 3, 3, 5, 6, 4, 4],
+    },
+  },
 ];
 
 export const STAGES: Stage[] = STAGE_DEFS.map(buildStage);
-
-/** 手作りステージに、その日のデイリーチャレンジ(自動生成)を末尾に加えた一覧 */
-export const ALL_STAGES: Stage[] = [...STAGES, buildDailyStage(new Date())];
