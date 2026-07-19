@@ -227,6 +227,9 @@ button {
 .legend-crumble {
   color: #6a4a2a;
 }
+.legend-bomb {
+  color: #e06c60;
+}
 .key-help {
   font-size: 7px;
   letter-spacing: 2px;

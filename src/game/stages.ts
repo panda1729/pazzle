@@ -147,6 +147,28 @@ export const STAGE_DEFS: StageDef[] = [
       { pos: [8, 3], uses: 1 },
     ],
   },
+  {
+    id: 9,
+    label: "STAGE 09",
+    desc: "BOMB",
+    size: 7,
+    seed: 4,
+    // braid でループを作り、爆弾を避ける迂回ルートを選べるようにする(他ギミックなしの純粋推理ステージ)
+    braid: 0.4,
+    start: [0, 0],
+    goal: [6, 6],
+    checkpoints: [],
+    warps: [],
+    // 最適経路(par=18)のすぐ脇(チェビシェフ距離1)に固めて配置。start の8近傍には置かない
+    bombs: [
+      [2, 1],
+      [2, 2],
+      [2, 3],
+      [2, 4],
+      [3, 4],
+      [4, 4],
+    ],
+  },
 ];
 
 export const STAGES: Stage[] = STAGE_DEFS.map(buildStage);

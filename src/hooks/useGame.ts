@@ -25,6 +25,8 @@ export interface GameState {
   lastWarp: Position | null;
   /** 各 crumble マスの残り踏み込み回数(stage.crumbleCells と同じ並び) */
   crumbleLeft: number[];
+  /** 踏んでしまった爆弾マス(失敗時のみ非null) */
+  bombHit: Position | null;
 }
 
 type Action =
@@ -45,6 +47,7 @@ export function initState(stageIdx: number): GameState {
     result: null,
     lastWarp: null,
     crumbleLeft: stage.crumbleCells.map((c) => c.uses),
+    bombHit: null,
   };
 }
 
@@ -114,6 +117,11 @@ export function reduce(state: GameState, action: Action): GameState {
         lastWarp: warp ? pos : null,
         crumbleLeft,
       };
+
+      // 着地マス(ワープ後なら着地先)が爆弾なら、歩数は消費した上で即失敗
+      if (stage.bombs.some((b) => samePos(b, pos))) {
+        return { ...next, status: "failed", bombHit: pos };
+      }
 
       if (stage.oneStroke) {
         // クリア判定: ゴールに到達し、かつ全マスを踏破している

@@ -1,7 +1,8 @@
 import { generateMaze, generateOpenGrid } from "./maze";
+import { blockCells } from "./metrics";
 import { findRouteThrough, routeCost } from "./solver";
 import { samePos } from "./types";
-import type { Stage, StageDef } from "./types";
+import type { Position, Stage, StageDef } from "./types";
 
 /**
  * StageDef → Stage への変換(par はソルバーによる最小コストから自動算出し、limit はその2倍とする)。
@@ -12,6 +13,7 @@ import type { Stage, StageDef } from "./types";
 export function buildStage(def: StageDef): Stage {
   const heavyCells = def.heavyCells ?? [];
   const crumbleCells = def.crumbleCells ?? [];
+  const bombs = def.bombs ?? [];
   const oneStroke = def.oneStroke ?? false;
   const braid = def.braid ?? 0;
 
@@ -21,7 +23,8 @@ export function buildStage(def: StageDef): Stage {
       def.checkpoints.length > 0 ||
       def.warps.length > 0 ||
       heavyCells.length > 0 ||
-      crumbleCells.length > 0
+      crumbleCells.length > 0 ||
+      bombs.length > 0
     ) {
       throw new Error(`Stage ${def.id}: 一筆書きモードは他のギミックと併用できません`);
     }
@@ -29,7 +32,7 @@ export function buildStage(def: StageDef): Stage {
     const grid = generateOpenGrid(def.size);
     // 再訪不可なので歩数は「全マス数-1」を超えられず、par もそれと一致する
     const par = def.size * def.size - 1;
-    return { ...def, grid, par, limit: par, heavyCells, crumbleCells, oneStroke, braid };
+    return { ...def, grid, par, limit: par, heavyCells, crumbleCells, bombs, oneStroke, braid };
   }
 
   const grid = generateMaze(def.size, def.seed, braid);
@@ -41,8 +44,29 @@ export function buildStage(def: StageDef): Stage {
     }
   }
 
+  // 爆弾マスが他の特殊マス(start/goal/checkpoints/warp from・to/heavy/crumble)と重なっていないかチェック
+  if (bombs.length > 0) {
+    const otherSpecialCells: Position[] = [
+      def.start,
+      def.goal,
+      ...def.checkpoints.map((cp): Position => [cp.row, cp.col]),
+      ...def.warps.flatMap((w) => [w.from, w.to]),
+      ...heavyCells,
+      ...crumbleCells.map((c) => c.pos),
+    ];
+    for (const bomb of bombs) {
+      if (otherSpecialCells.some((cell) => samePos(cell, bomb))) {
+        throw new Error(`Stage ${def.id}: 爆弾マスが他の特殊マスと重なっています`);
+      }
+    }
+  }
+
+  // par 算出・到達可能性チェックは、爆弾マスを塞いだグリッド(爆弾を避ける前提)で行う。
+  // ゲーム用の grid 自体(実際に爆弾マスへ踏み込めること)は変えない。
+  const routingGrid = bombs.length > 0 ? blockCells(grid, def.size, bombs) : grid;
+
   const route = findRouteThrough(
-    grid,
+    routingGrid,
     def.size,
     def.start,
     def.goal,
@@ -63,5 +87,5 @@ export function buildStage(def: StageDef): Stage {
   }
 
   const par = routeCost(route, heavyCells);
-  return { ...def, grid, par, limit: par * 2, heavyCells, crumbleCells, oneStroke, braid };
+  return { ...def, grid, par, limit: par * 2, heavyCells, crumbleCells, bombs, oneStroke, braid };
 }

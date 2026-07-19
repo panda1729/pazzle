@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { blockCells } from "../game/metrics";
+import { findPath, findRouteThrough } from "../game/solver";
 import { STAGES } from "../game/stages";
 import { initState, reduce } from "./useGame";
 
@@ -57,6 +59,74 @@ describe("reduce (move)", () => {
     };
 
     expect(testState.crumbleLeft[crumbleIdx]).toBe(0);
+  });
+});
+
+describe("reduce (move) - bomb (STAGE 09)", () => {
+  const idx = STAGES.findIndex((s) => s.id === 9);
+
+  it("STAGE 09 が見つかる", () => {
+    expect(idx).toBeGreaterThanOrEqual(0);
+  });
+
+  it("爆弾マスに踏み込むと歩数は消費した上で failed になり、bombHit がセットされる", () => {
+    const stage = STAGES[idx];
+    const targetBomb = stage.bombs[0];
+    // 実際のゲーム用グリッド(壁は爆弾で塞がれていない)上で、スタートから爆弾マスへの経路をソルバーで求める
+    const path = findPath(stage.grid, stage.size, stage.start, targetBomb);
+    expect(path).not.toBeNull();
+
+    // 経路の途中で別の爆弾マスを先に踏む可能性があるため、実際に最初に踏む爆弾マスを特定する
+    // (reduce は status が "playing" でなくなると以降の move を無視するので、最終状態は自然と最初の爆弾で止まる)
+    const firstBombOnPath = path!
+      .slice(1)
+      .find((p) => stage.bombs.some(([br, bc]) => br === p[0] && bc === p[1]))!;
+    expect(firstBombOnPath).toBeDefined();
+
+    const moves: [number, number][] = [];
+    for (let i = 1; i < path!.length; i++) {
+      const [pr, pc] = path![i - 1];
+      const [nr, nc] = path![i];
+      moves.push([nr - pr, nc - pc]);
+    }
+
+    const finalState = moves.reduce(
+      (state, [dr, dc]) => reduce(state, { type: "move", dr, dc }),
+      initState(idx),
+    );
+
+    expect(finalState.pos).toEqual(firstBombOnPath);
+    expect(finalState.status).toBe("failed");
+    expect(finalState.bombHit).toEqual(firstBombOnPath);
+  });
+
+  it("爆弾を避けてゴールすればクリアできる(爆弾を塞いだグリッドでソルバーが求めた経路を再生する)", () => {
+    const stage = STAGES[idx];
+    // build.ts の par 算出と同じく、爆弾マスを塞いだグリッドで安全な最短経路を求める
+    const safeGrid = blockCells(stage.grid, stage.size, stage.bombs);
+    const route = findRouteThrough(safeGrid, stage.size, stage.start, stage.goal, [], [], []);
+    expect(route).not.toBeNull();
+    // 経路上のどのマスも爆弾ではないことを確認
+    for (const [r, c] of route!) {
+      expect(stage.bombs.some(([br, bc]) => br === r && bc === c)).toBe(false);
+    }
+
+    const moves: [number, number][] = [];
+    for (let i = 1; i < route!.length; i++) {
+      const [pr, pc] = route![i - 1];
+      const [nr, nc] = route![i];
+      moves.push([nr - pr, nc - pc]);
+    }
+
+    const finalState = moves.reduce(
+      (state, [dr, dc]) => reduce(state, { type: "move", dr, dc }),
+      initState(idx),
+    );
+
+    expect(finalState.pos).toEqual(stage.goal);
+    expect(finalState.status).toBe("cleared");
+    expect(finalState.bombHit).toBeNull();
+    expect(finalState.result?.steps).toBe(stage.par);
   });
 });
 

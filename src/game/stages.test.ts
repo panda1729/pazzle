@@ -151,7 +151,68 @@ describe("STAGES", () => {
     expect(stage!.par).toBeGreaterThanOrEqual(40);
   });
 
-  it("全ステージで、特殊マス(start/goal/checkpoints/warp from・to/heavy/crumble)が互いに重複していない", () => {
+  it("STAGE 09(BOMB)が含まれ、爆弾数が4〜6個・par が15以上・他ギミックなし", () => {
+    const stage = STAGES.find((s) => s.id === 9);
+    expect(stage).toBeDefined();
+    expect(stage!.desc).toBe("BOMB");
+    expect(stage!.bombs.length).toBeGreaterThanOrEqual(4);
+    expect(stage!.bombs.length).toBeLessThanOrEqual(6);
+    expect(stage!.par).toBeGreaterThanOrEqual(15);
+    expect(stage!.checkpoints.length).toBe(0);
+    expect(stage!.warps.length).toBe(0);
+    expect(stage!.heavyCells.length).toBe(0);
+    expect(stage!.crumbleCells.length).toBe(0);
+  });
+
+  it("STAGE 09: start の8近傍に爆弾がない(初手死の理不尽防止)", () => {
+    const stage = STAGES.find((s) => s.id === 9)!;
+    for (const bomb of stage.bombs) {
+      expect(chebyshev(bomb, stage.start)).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  it("STAGE 09: 爆弾の過半数が最適経路からチェビシェフ距離1以内にある(推理要素が成立する配置)", () => {
+    const stage = STAGES.find((s) => s.id === 9)!;
+    const route = findRouteThrough(stage.grid, stage.size, stage.start, stage.goal, [], [], []);
+    expect(route).not.toBeNull();
+    const nearCount = stage.bombs.filter((b) => route!.some((p) => chebyshev(b, p) <= 1)).length;
+    expect(nearCount / stage.bombs.length).toBeGreaterThanOrEqual(0.5);
+  });
+
+  it("爆弾マスが他の特殊マス(ここでは checkpoint)と重なる定義は throw", () => {
+    const invalidDef: StageDef = {
+      id: 999,
+      label: "INVALID",
+      desc: "TEST",
+      size: 5,
+      seed: 42,
+      start: [0, 0],
+      goal: [4, 4],
+      checkpoints: [{ row: 2, col: 2 }],
+      warps: [],
+      bombs: [[2, 2]], // checkpoint と重なる
+    };
+    expect(() => buildStage(invalidDef)).toThrow();
+  });
+
+  it("oneStroke: true と bombs を併用する定義は throw", () => {
+    const invalidDef: StageDef = {
+      id: 999,
+      label: "INVALID",
+      desc: "TEST",
+      size: 5,
+      seed: 0,
+      start: [0, 0],
+      goal: [4, 4],
+      checkpoints: [],
+      warps: [],
+      oneStroke: true,
+      bombs: [[1, 1]],
+    };
+    expect(() => buildStage(invalidDef)).toThrow();
+  });
+
+  it("全ステージで、特殊マス(start/goal/checkpoints/warp from・to/heavy/crumble/bomb)が互いに重複していない", () => {
     for (const stage of STAGES) {
       const cells: Position[] = [
         stage.start,
@@ -160,6 +221,7 @@ describe("STAGES", () => {
         ...stage.warps.flatMap((w) => [w.from, w.to]),
         ...stage.heavyCells,
         ...stage.crumbleCells.map((c) => c.pos),
+        ...stage.bombs,
       ];
       for (let i = 0; i < cells.length; i++) {
         for (let j = i + 1; j < cells.length; j++) {
@@ -191,6 +253,9 @@ describe("STAGES", () => {
     ).toThrow();
     expect(() =>
       buildStage({ ...base, checkpoints: [], warps: [], crumbleCells: [{ pos: [1, 1], uses: 1 }] }),
+    ).toThrow();
+    expect(() =>
+      buildStage({ ...base, checkpoints: [], warps: [], bombs: [[1, 1]] }),
     ).toThrow();
   });
 

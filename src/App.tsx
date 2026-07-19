@@ -6,6 +6,7 @@ import { MazeCanvas } from "./components/MazeCanvas";
 import { ResultOverlay } from "./components/ResultOverlay";
 import { StageTabs } from "./components/StageTabs";
 import { StatsPanel } from "./components/StatsPanel";
+import { blockCells } from "./game/metrics";
 import { findRouteThrough } from "./game/solver";
 import { ALL_STAGES } from "./game/stages";
 import { useGame } from "./hooks/useGame";
@@ -16,6 +17,12 @@ export default function App() {
 
   useEffect(() => setShowHint(false), [state.stageIdx]);
 
+  // 爆弾ありステージでは、爆弾マスを塞いだグリッドでヒント探索する(爆弾を通るヒントを出さないため)
+  const hintGrid = useMemo(
+    () => (stage.bombs.length > 0 ? blockCells(stage.grid, stage.size, stage.bombs) : stage.grid),
+    [stage],
+  );
+
   // 現在地から未通過チェックポイントを経由してゴールへ向かう最短経路
   // 注: 崩れる床の残回数を考慮しない既知の制限。ヒント経路が不正になる可能性あり
   // 一筆書きモードはハミルトン路探索が未実装なのでヒントを出さない
@@ -23,7 +30,7 @@ export default function App() {
     if (stage.oneStroke || !showHint || state.status !== "playing") return null;
     const remaining = stage.checkpoints.filter((_, i) => !state.cpDone[i]);
     return findRouteThrough(
-      stage.grid,
+      hintGrid,
       stage.size,
       state.pos,
       stage.goal,
@@ -31,7 +38,7 @@ export default function App() {
       stage.warps,
       stage.heavyCells,
     );
-  }, [showHint, state.status, state.pos, state.cpDone, stage]);
+  }, [showHint, state.status, state.pos, state.cpDone, hintGrid, stage]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -69,6 +76,7 @@ export default function App() {
           hintPath={hintPath}
           warpFlash={state.lastWarp}
           crumbleLeft={state.crumbleLeft}
+          bombHit={state.bombHit}
         />
       </div>
 
@@ -91,6 +99,7 @@ export default function App() {
         <span className="legend-warp">WARP</span>
         <span className="legend-heavy">×2</span>
         <span className="legend-crumble">CRUMBLE</span>
+        <span className="legend-bomb">BOMB</span>
       </div>
       <div className="key-help">ARROW KEYS / WASD</div>
 
