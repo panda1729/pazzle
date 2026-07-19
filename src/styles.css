@@ -1,0 +1,267 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #0a0a0a;
+}
+
+button {
+  font-family: inherit;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  font-family: "Courier New", monospace;
+  color: #b8b8b8;
+  user-select: none;
+}
+
+/* ── Header ── */
+.header {
+  margin-bottom: 18px;
+  text-align: center;
+}
+.header-system {
+  font-size: 9px;
+  letter-spacing: 6px;
+  color: #383838;
+  margin-bottom: 3px;
+}
+.header-stage {
+  font-size: 18px;
+  letter-spacing: 7px;
+  color: #d0d0d0;
+  font-weight: bold;
+}
+.header-desc {
+  font-size: 9px;
+  letter-spacing: 4px;
+  color: #484848;
+  margin-left: 12px;
+}
+
+/* ── Stage tabs ── */
+.stage-tabs {
+  display: flex;
+  gap: 3px;
+  margin-bottom: 14px;
+}
+.stage-tab {
+  background: transparent;
+  border: 1px solid #282828;
+  color: #444;
+  padding: 2px 11px;
+  font-size: 8px;
+  letter-spacing: 3px;
+  cursor: pointer;
+}
+.stage-tab.is-active {
+  background: #1e1e1e;
+  border-color: #484848;
+  color: #c8c8c8;
+}
+
+/* ── Stats ── */
+.stats-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 3px;
+  margin-bottom: 6px;
+}
+.stat-box {
+  background: #111;
+  border: 1px solid #222;
+  padding: 4px 0;
+  text-align: center;
+}
+.stat-label {
+  font-size: 7px;
+  letter-spacing: 3px;
+  color: #444;
+}
+.stat-value {
+  font-size: 20px;
+  line-height: 1.3;
+  color: #d0d0d0;
+}
+.stat-value.is-warn {
+  color: #cc4444;
+}
+.progress-track {
+  height: 2px;
+  background: #181818;
+  margin-bottom: 8px;
+}
+.progress-bar {
+  height: 100%;
+  transition: width 0.15s, background 0.3s;
+}
+
+/* ── Checkpoints ── */
+.cp-list {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 7px;
+}
+.cp-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: #484848;
+}
+.cp-item .cp-dot {
+  width: 6px;
+  height: 6px;
+  border: 1px solid #484848;
+  background: transparent;
+}
+.cp-item.is-done {
+  color: #4ecdc4;
+}
+.cp-item.is-done .cp-dot {
+  border-color: #4ecdc4;
+  background: #4ecdc4;
+}
+
+/* ── Board ── */
+.board-frame {
+  border: 1px solid #484848;
+}
+.maze-canvas {
+  display: block;
+}
+
+/* ── D-pad ── */
+.dpad {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.dpad-row {
+  display: flex;
+  gap: 2px;
+}
+.dpad-btn {
+  width: 40px;
+  height: 40px;
+  background: #141414;
+  border: 1px solid #2a2a2a;
+  color: #707070;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* ── Actions ── */
+.actions {
+  display: flex;
+  gap: 7px;
+  margin-top: 10px;
+}
+.action-btn {
+  background: #181818;
+  border: 1px solid #505050;
+  color: #505050;
+  padding: 4px 13px;
+  font-size: 8px;
+  letter-spacing: 3px;
+  cursor: pointer;
+}
+.action-btn.is-primary {
+  background: #101e10;
+  border-color: #4ecdc4;
+  color: #4ecdc4;
+}
+.action-btn.is-danger {
+  background: #1e0808;
+  border-color: #cc4444;
+  color: #cc4444;
+}
+
+/* ── Legend ── */
+.legend {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 7px;
+  letter-spacing: 2px;
+}
+.legend-goal {
+  color: #6a5a00;
+}
+.legend-cp {
+  color: #206060;
+}
+.legend-warp {
+  color: #4a3a70;
+}
+.key-help {
+  font-size: 7px;
+  letter-spacing: 2px;
+  color: #262626;
+  margin-top: 2px;
+}
+
+/* ── Overlay ── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.overlay-box {
+  background: #0e0e0e;
+  border: 1px solid #282828;
+  padding: 32px 52px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.overlay-title {
+  font-size: 8px;
+  letter-spacing: 6px;
+  color: #505050;
+  margin-bottom: 10px;
+}
+.overlay-rank {
+  font-size: 72px;
+  font-weight: bold;
+  line-height: 1;
+}
+.overlay-rank.is-fail {
+  font-size: 60px;
+  color: #cc4444;
+  margin-bottom: 18px;
+}
+.overlay-score {
+  font-size: 26px;
+  color: #d0d0d0;
+  margin: 6px 0 2px;
+}
+.overlay-unit {
+  font-size: 9px;
+  color: #505050;
+}
+.overlay-detail {
+  font-size: 9px;
+  color: #505050;
+  margin-bottom: 18px;
+}
+.overlay-actions {
+  display: flex;
+  gap: 7px;
+}
