@@ -15,9 +15,9 @@ describe("reduce (move)", () => {
     expect(state.pos).toEqual([1, 0]);
     expect(state.steps).toBe(1);
 
-    // (1,0) → 東へ1歩 → (1,1)(heavyマス、+2)
-    state = reduce(state, { type: "move", dr: 0, dc: 1 });
-    expect(state.pos).toEqual([1, 1]);
+    // (1,0) → 南へ1歩 → (2,0)(heavyマス、+2)
+    state = reduce(state, { type: "move", dr: 1, dc: 0 });
+    expect(state.pos).toEqual([2, 0]);
     expect(state.steps).toBe(3);
   });
 
@@ -36,11 +36,11 @@ describe("reduce (move)", () => {
 
     const state = initState(idx);
     const stage = STAGES[idx];
-    const crumbleIdx = stage.crumbleCells.findIndex((c) => c.uses === 2);
+    const crumbleIdx = stage.crumbleCells.findIndex((c) => c.uses === 1);
     expect(crumbleIdx).toBeGreaterThanOrEqual(0);
 
     const initialUses = state.crumbleLeft[crumbleIdx];
-    expect(initialUses).toBe(2);
+    expect(initialUses).toBe(1);
   });
 
   it("crumble マスの残回数が0になると移動がブロックされる", () => {
@@ -48,7 +48,7 @@ describe("reduce (move)", () => {
     expect(idx).toBeGreaterThanOrEqual(0);
 
     const state = initState(idx);
-    const crumbleIdx = 0; // 最初の crumble マス [2, 1] with uses: 2
+    const crumbleIdx = 0; // 最初の crumble マス [4, 2] with uses: 1
 
     // 手動で crumbleLeft を 0 に設定して、ロジックが正しく動作することを確認
     const testState = {

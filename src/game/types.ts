@@ -44,6 +44,8 @@ export interface StageDef {
   crumbleCells?: CrumbleCell[];
   /** 一筆書きモード(全マスをちょうど1回ずつ踏破してゴールする)か */
   oneStroke?: boolean;
+  /** 0〜1。行き止まりを確率的に壊してループ(閉路)を作り、ルート選択を生む度合い */
+  braid?: number;
 }
 
 /** 定義から生成された、プレイ可能なステージ */
@@ -56,6 +58,7 @@ export interface Stage extends StageDef {
   heavyCells: Position[];
   crumbleCells: CrumbleCell[];
   oneStroke: boolean;
+  braid: number;
 }
 
 export const samePos = (a: Position, b: Position): boolean =>

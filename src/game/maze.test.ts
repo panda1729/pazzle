@@ -27,6 +27,18 @@ function reachableCount(grid: Grid, size: number): number {
   return visited.size;
 }
 
+/** グリッド内の開通壁ペア(辺)の総数を数える(e/s の開通を数えれば重複なく数えられる) */
+function countEdges(grid: Grid, size: number): number {
+  let count = 0;
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (grid[r][c].e) count++;
+      if (grid[r][c].s) count++;
+    }
+  }
+  return count;
+}
+
 describe("generateMaze", () => {
   it("同じシードから同じ迷路が生成される", () => {
     expect(generateMaze(8, 123)).toEqual(generateMaze(8, 123));
@@ -67,6 +79,30 @@ describe("generateMaze", () => {
 
   it("大きな迷路でもスタックオーバーフローしない", () => {
     expect(() => generateMaze(100, 1)).not.toThrow();
+  });
+
+  it("braid=0 は従来の完全迷路と完全に同一(後方互換)", () => {
+    for (const seed of [1, 42, 999]) {
+      expect(generateMaze(8, seed, 0)).toEqual(generateMaze(8, seed));
+    }
+  });
+
+  it("braid>0 は行き止まりを壊して閉路を作り、開通壁ペア数が size*size-1 を超える", () => {
+    const size = 10;
+    const grid = generateMaze(size, 1, 0.8);
+    // 完全迷路(木構造)は辺の数がちょうど size*size-1。閉路ができれば辺が増える。
+    expect(countEdges(grid, size)).toBeGreaterThan(size * size - 1);
+  });
+
+  it("braid>0 でも全マスに到達できる(壁を壊すだけで削らないため到達性は保たれる)", () => {
+    const size = 10;
+    for (const braid of [0.3, 0.6, 1]) {
+      expect(reachableCount(generateMaze(size, 5, braid), size)).toBe(size * size);
+    }
+  });
+
+  it("braid>0 でも同じ seed からは同じ迷路が決定的に生成される", () => {
+    expect(generateMaze(10, 123, 0.5)).toEqual(generateMaze(10, 123, 0.5));
   });
 });
 
