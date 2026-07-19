@@ -350,6 +350,8 @@ export function generateStageDef(
         id: overrides.id ?? 0,
         label: overrides.label ?? difficulty.toUpperCase(),
         desc: overrides.desc ?? `SEED ${seed}`,
+        // 内部の subSeed(def.seed)は迷路生成専用。共有URL復元用に呼び出し元の seed を別途保持する
+        originalSeed: seed,
       };
     }
   }
