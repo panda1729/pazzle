@@ -13,4 +13,5 @@ Thumbs.db
 node_modules/
 dist/
 *.local
+*.tsbuildinfo
 npm-debug.log*
