@@ -1,7 +1,10 @@
-import { generateMaze, generateOpenGrid } from "./maze";
-import { findRouteThrough, routeCost } from "./solver";
-import { samePos } from "./types";
+import { buildStage } from "./build";
+import { buildDailyStage } from "./generator";
 import type { Stage, StageDef } from "./types";
+
+// buildStage は build.ts に定義されているが、既存コード(テスト含む)との互換のため
+// stages.ts からも re-export する
+export { buildStage } from "./build";
 
 export const STAGE_DEFS: StageDef[] = [
   {
@@ -146,62 +149,7 @@ export const STAGE_DEFS: StageDef[] = [
   },
 ];
 
-/** par はソルバーによる最小コストから自動算出し、limit はその2倍とする */
-export function buildStage(def: StageDef): Stage {
-  const heavyCells = def.heavyCells ?? [];
-  const crumbleCells = def.crumbleCells ?? [];
-  const oneStroke = def.oneStroke ?? false;
-  const braid = def.braid ?? 0;
-
-  if (oneStroke) {
-    // 一筆書きモードは他ギミックと併用しない(全マス踏破の判定がシンプルでなくなるため)
-    if (
-      def.checkpoints.length > 0 ||
-      def.warps.length > 0 ||
-      heavyCells.length > 0 ||
-      crumbleCells.length > 0
-    ) {
-      throw new Error(`Stage ${def.id}: 一筆書きモードは他のギミックと併用できません`);
-    }
-    // 通常の迷路(木構造)は全マス一筆書きがほぼ不可能なので、内壁のないオープングリッドを使う
-    const grid = generateOpenGrid(def.size);
-    // 再訪不可なので歩数は「全マス数-1」を超えられず、par もそれと一致する
-    const par = def.size * def.size - 1;
-    return { ...def, grid, par, limit: par, heavyCells, crumbleCells, oneStroke, braid };
-  }
-
-  const grid = generateMaze(def.size, def.seed, braid);
-
-  // crumble マスが start と重ならないかチェック
-  for (const crumble of crumbleCells) {
-    if (samePos(crumble.pos, def.start)) {
-      throw new Error(`Stage ${def.id}: 崩れる床が start マスと重なっています`);
-    }
-  }
-
-  const route = findRouteThrough(
-    grid,
-    def.size,
-    def.start,
-    def.goal,
-    def.checkpoints,
-    def.warps,
-    heavyCells,
-  );
-  if (!route) throw new Error(`Stage ${def.id}: ゴールに到達できない迷路定義です`);
-
-  // 最適経路での crumble マスへの進入回数チェック
-  for (const crumble of crumbleCells) {
-    const count = route.slice(1).filter((pos) => samePos(pos, crumble.pos)).length;
-    if (count > crumble.uses) {
-      throw new Error(
-        `Stage ${def.id}: 最適経路が崩れる床 ${crumble.pos} を ${count} 回通りますが、uses は ${crumble.uses} です`
-      );
-    }
-  }
-
-  const par = routeCost(route, heavyCells);
-  return { ...def, grid, par, limit: par * 2, heavyCells, crumbleCells, oneStroke, braid };
-}
-
 export const STAGES: Stage[] = STAGE_DEFS.map(buildStage);
+
+/** 手作りステージに、その日のデイリーチャレンジ(自動生成)を末尾に加えた一覧 */
+export const ALL_STAGES: Stage[] = [...STAGES, buildDailyStage(new Date())];

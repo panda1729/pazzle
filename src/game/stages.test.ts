@@ -1,50 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { blockedCost, chebyshev } from "./metrics";
 import { findRouteThrough, routeCost } from "./solver";
 import { buildStage, STAGES } from "./stages";
 import { samePos } from "./types";
-import type { Checkpoint, Direction, Grid, Position, StageDef, Warp } from "./types";
-
-const BLOCK_DIRS: { dr: number; dc: number; from: Direction; to: Direction }[] = [
-  { dr: -1, dc: 0, from: "s", to: "n" },
-  { dr: 1, dc: 0, from: "n", to: "s" },
-  { dr: 0, dc: 1, from: "w", to: "e" },
-  { dr: 0, dc: -1, from: "e", to: "w" },
-];
-
-/** 指定マス群の四方の壁を全て閉じたグリッドのコピーを返す(そのマスを経路探索から除外するため) */
-function blockCells(grid: Grid, size: number, cells: Position[]): Grid {
-  const copy = grid.map((row) => row.map((cell) => ({ ...cell })));
-  for (const [r, c] of cells) {
-    for (const { dr, dc, from, to } of BLOCK_DIRS) {
-      if (copy[r][c][to]) {
-        const nr = r + dr;
-        const nc = c + dc;
-        copy[r][c][to] = false;
-        if (nr >= 0 && nr < size && nc >= 0 && nc < size) copy[nr][nc][from] = false;
-      }
-    }
-  }
-  return copy;
-}
-
-/** 指定マス群を壁で塞いだ場合の from→goal(CP経由)の最短コスト。到達不能なら Infinity */
-function blockedCost(
-  grid: Grid,
-  size: number,
-  start: Position,
-  goal: Position,
-  checkpoints: Checkpoint[],
-  warps: Warp[],
-  heavyCells: Position[],
-  blocked: Position[],
-): number {
-  const blockedGrid = blockCells(grid, size, blocked);
-  const route = findRouteThrough(blockedGrid, size, start, goal, checkpoints, warps, heavyCells);
-  return route ? routeCost(route, heavyCells) : Infinity;
-}
-
-const chebyshev = (a: Position, b: Position): number =>
-  Math.max(Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1]));
+import type { Position, StageDef } from "./types";
 
 describe("STAGES", () => {
   it("全ステージがクリア可能で par/limit が算出されている", () => {

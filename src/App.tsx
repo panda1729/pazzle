@@ -7,7 +7,7 @@ import { ResultOverlay } from "./components/ResultOverlay";
 import { StageTabs } from "./components/StageTabs";
 import { StatsPanel } from "./components/StatsPanel";
 import { findRouteThrough } from "./game/solver";
-import { STAGES } from "./game/stages";
+import { ALL_STAGES } from "./game/stages";
 import { useGame } from "./hooks/useGame";
 
 export default function App() {
@@ -57,7 +57,7 @@ export default function App() {
         </div>
       </header>
 
-      <StageTabs stages={STAGES} currentIdx={state.stageIdx} onSelect={selectStage} />
+      <StageTabs stages={ALL_STAGES} currentIdx={state.stageIdx} onSelect={selectStage} />
       <StatsPanel steps={state.steps} par={stage.par} limit={stage.limit} widthPx={widthPx} />
       <CheckpointList checkpoints={stage.checkpoints} cpDone={state.cpDone} />
 
@@ -98,7 +98,7 @@ export default function App() {
         status={state.status}
         result={state.result}
         stage={stage}
-        hasNext={state.stageIdx < STAGES.length - 1}
+        hasNext={state.stageIdx < ALL_STAGES.length - 1}
         onRetry={reset}
         onNext={() => selectStage(state.stageIdx + 1)}
       />

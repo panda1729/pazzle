@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useReducer } from "react";
 import { calcRank, calcScore } from "../game/score";
 import type { Rank } from "../game/score";
-import { STAGES } from "../game/stages";
+import { ALL_STAGES } from "../game/stages";
 import { samePos } from "../game/types";
 import type { Position } from "../game/types";
 
@@ -34,7 +34,7 @@ type Action =
   | { type: "clearWarpFlash" };
 
 export function initState(stageIdx: number): GameState {
-  const stage = STAGES[stageIdx];
+  const stage = ALL_STAGES[stageIdx];
   return {
     stageIdx,
     pos: stage.start,
@@ -68,7 +68,7 @@ export function reduce(state: GameState, action: Action): GameState {
       return { ...state, lastWarp: null };
     case "move": {
       if (state.status !== "playing") return state;
-      const stage = STAGES[state.stageIdx];
+      const stage = ALL_STAGES[state.stageIdx];
       const [r, c] = state.pos;
       const key = DIR_KEYS[`${action.dr},${action.dc}` as keyof typeof DIR_KEYS];
       if (!key || !stage.grid[r][c][key]) return state;
@@ -144,7 +144,7 @@ export function reduce(state: GameState, action: Action): GameState {
 
 export function useGame() {
   const [state, dispatch] = useReducer(reduce, 0, initState);
-  const stage = STAGES[state.stageIdx];
+  const stage = ALL_STAGES[state.stageIdx];
 
   const move = useCallback((dr: number, dc: number) => dispatch({ type: "move", dr, dc }), []);
   const reset = useCallback(() => dispatch({ type: "reset" }), []);
