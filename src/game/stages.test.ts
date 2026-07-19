@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { findRouteThrough, routeCost } from "./solver";
-import { STAGES } from "./stages";
+import { buildStage, STAGES } from "./stages";
 import { samePos } from "./types";
+import type { StageDef } from "./types";
 
 describe("STAGES", () => {
   it("全ステージがクリア可能で par/limit が算出されている", () => {
@@ -62,5 +63,51 @@ describe("STAGES", () => {
       expect(route).not.toBeNull();
       expect(stage.par).toBe(routeCost(route!, stage.heavyCells));
     }
+  });
+
+  it("STAGE 05(CRUMBLE)が含まれ、crumbleCells が start と重ならない", () => {
+    const stage = STAGES.find((s) => s.id === 5);
+    expect(stage).toBeDefined();
+    expect(stage!.desc).toBe("CRUMBLE");
+    expect(stage!.crumbleCells.length).toBeGreaterThan(0);
+    for (const crumble of stage!.crumbleCells) {
+      expect(samePos(crumble.pos, stage!.start)).toBe(false);
+    }
+  });
+
+  it("最適経路が crumble マスを uses 以上の回数で通る不正な定義は throw", () => {
+    const invalidDef: StageDef = {
+      id: 999,
+      label: "INVALID",
+      desc: "TEST",
+      size: 5,
+      seed: 42,
+      start: [0, 0],
+      goal: [4, 4],
+      checkpoints: [],
+      warps: [],
+      crumbleCells: [
+        { pos: [0, 1], uses: 0 }, // 最適経路でも通るが uses が 0 は不正
+      ],
+    };
+    expect(() => buildStage(invalidDef)).toThrow();
+  });
+
+  it("crumble マスが start と重なる定義は throw", () => {
+    const invalidDef: StageDef = {
+      id: 999,
+      label: "INVALID",
+      desc: "TEST",
+      size: 5,
+      seed: 42,
+      start: [0, 0],
+      goal: [4, 4],
+      checkpoints: [],
+      warps: [],
+      crumbleCells: [
+        { pos: [0, 0], uses: 1 }, // start と重なる
+      ],
+    };
+    expect(() => buildStage(invalidDef)).toThrow();
   });
 });

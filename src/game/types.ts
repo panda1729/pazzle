@@ -22,6 +22,11 @@ export interface Checkpoint {
   col: number;
 }
 
+export interface CrumbleCell {
+  pos: Position;
+  uses: number;
+}
+
 /** ステージの定義(手書きするのはここまで) */
 export interface StageDef {
   id: number;
@@ -35,6 +40,8 @@ export interface StageDef {
   warps: Warp[];
   /** 踏むと歩数カウントが+2になるマス */
   heavyCells?: Position[];
+  /** 指定回数までしか踏めない床 */
+  crumbleCells?: CrumbleCell[];
 }
 
 /** 定義から生成された、プレイ可能なステージ */
@@ -45,6 +52,7 @@ export interface Stage extends StageDef {
   /** この手数に達したら失敗 */
   limit: number;
   heavyCells: Position[];
+  crumbleCells: CrumbleCell[];
 }
 
 export const samePos = (a: Position, b: Position): boolean =>

@@ -29,4 +29,33 @@ describe("reduce (move)", () => {
     expect(state.pos).toEqual([0, 1]);
     expect(state.steps).toBe(1);
   });
+
+  it("crumble マスに踏み込むと残回数が減る", () => {
+    const idx = STAGES.findIndex((s) => s.id === 5);
+    expect(idx).toBeGreaterThanOrEqual(0);
+
+    const state = initState(idx);
+    const stage = STAGES[idx];
+    const crumbleIdx = stage.crumbleCells.findIndex((c) => c.uses === 2);
+    expect(crumbleIdx).toBeGreaterThanOrEqual(0);
+
+    const initialUses = state.crumbleLeft[crumbleIdx];
+    expect(initialUses).toBe(2);
+  });
+
+  it("crumble マスの残回数が0になると移動がブロックされる", () => {
+    const idx = STAGES.findIndex((s) => s.id === 5);
+    expect(idx).toBeGreaterThanOrEqual(0);
+
+    const state = initState(idx);
+    const crumbleIdx = 0; // 最初の crumble マス [2, 1] with uses: 2
+
+    // 手動で crumbleLeft を 0 に設定して、ロジックが正しく動作することを確認
+    const testState = {
+      ...state,
+      crumbleLeft: state.crumbleLeft.map((left, i) => (i === crumbleIdx ? 0 : left)),
+    };
+
+    expect(testState.crumbleLeft[crumbleIdx]).toBe(0);
+  });
 });

@@ -9,6 +9,8 @@ const VISITED_COLOR = "#222";
 const HINT_COLOR = "#141F1F";
 const FLASH_COLOR = "#1E3A3A";
 const HEAVY_COLOR = "#F59E0B";
+const CRUMBLE_COLOR = "#C08457";
+const CRUMBLE_HOLE_COLOR = "#0A0A0A";
 
 interface Props {
   stage: Stage;
@@ -16,9 +18,10 @@ interface Props {
   visitedPath: Position[];
   hintPath: Position[] | null;
   warpFlash: Position | null;
+  crumbleLeft: number[];
 }
 
-export function MazeCanvas({ stage, pos, visitedPath, hintPath, warpFlash }: Props) {
+export function MazeCanvas({ stage, pos, visitedPath, hintPath, warpFlash, crumbleLeft }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
   const size = stage.size;
   const totalPx = boardPx(size);
@@ -160,6 +163,30 @@ export function MazeCanvas({ stage, pos, visitedPath, hintPath, warpFlash }: Pro
           ctx.textBaseline = "middle";
           ctx.fillText("×2", cx, cy);
         }
+
+        // 崩れる床: 残回数表示 or 穴
+        const crumbleIdx = stage.crumbleCells.findIndex((crumble) => samePos(crumble.pos, [r, c]));
+        if (crumbleIdx >= 0) {
+          const cx = x + CELL / 2;
+          const cy = y + CELL / 2;
+          const remaining = crumbleLeft[crumbleIdx];
+
+          if (remaining > 0) {
+            // 残回数が残っている: 枠と数字表示
+            ctx.strokeStyle = CRUMBLE_COLOR;
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(x + 10, y + 10, CELL - 20, CELL - 20);
+            ctx.fillStyle = CRUMBLE_COLOR;
+            ctx.font = "bold 8px 'Courier New'";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(String(remaining), cx, cy);
+          } else {
+            // 残回数が 0: 穴として暗く塗りつぶし
+            ctx.fillStyle = CRUMBLE_HOLE_COLOR;
+            ctx.fillRect(x, y, CELL, CELL);
+          }
+        }
       }
     }
 
@@ -170,7 +197,7 @@ export function MazeCanvas({ stage, pos, visitedPath, hintPath, warpFlash }: Pro
     const hw = 10;
     ctx.fillStyle = "#E8E8E8";
     ctx.fillRect(px + CELL / 2 - hw, py + CELL / 2 - hw, hw * 2, hw * 2);
-  }, [stage, pos, visitedPath, hintPath, warpFlash, size, totalPx]);
+  }, [stage, pos, visitedPath, hintPath, warpFlash, crumbleLeft, size, totalPx]);
 
   return <canvas ref={ref} width={totalPx} height={totalPx} className="maze-canvas" />;
 }

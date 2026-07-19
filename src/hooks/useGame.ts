@@ -23,6 +23,8 @@ export interface GameState {
   result: GameResult | null;
   /** 直前の移動でワープした着地点(演出用、400ms後に消える) */
   lastWarp: Position | null;
+  /** 各 crumble マスの残り踏み込み回数(stage.crumbleCells と同じ並び) */
+  crumbleLeft: number[];
 }
 
 type Action =
@@ -42,6 +44,7 @@ export function initState(stageIdx: number): GameState {
     status: "playing",
     result: null,
     lastWarp: null,
+    crumbleLeft: stage.crumbleCells.map((c) => c.uses),
   };
 }
 
@@ -68,6 +71,13 @@ export function reduce(state: GameState, action: Action): GameState {
       if (warp) [nr, nc] = warp.to;
 
       const pos: Position = [nr, nc];
+
+      // 着地マスが崩れる床で、残回数が 0 なら移動をブロック
+      const crumbleIdx = stage.crumbleCells.findIndex((c) => samePos(c.pos, pos));
+      if (crumbleIdx >= 0 && state.crumbleLeft[crumbleIdx] <= 0) {
+        return state;
+      }
+
       // 着地マス(ワープ後なら着地先)が2倍マスなら歩数を+2、そうでなければ+1
       const isHeavy = stage.heavyCells.some((h) => samePos(h, pos));
       const steps = state.steps + (isHeavy ? 2 : 1);
@@ -75,6 +85,13 @@ export function reduce(state: GameState, action: Action): GameState {
         const cp = stage.checkpoints[i];
         return done || (cp.row === nr && cp.col === nc);
       });
+
+      // 崩れる床の残回数を減らす
+      const crumbleLeft = state.crumbleLeft.slice();
+      if (crumbleIdx >= 0) {
+        crumbleLeft[crumbleIdx]--;
+      }
+
       const next: GameState = {
         ...state,
         pos,
@@ -82,6 +99,7 @@ export function reduce(state: GameState, action: Action): GameState {
         visited: [...state.visited, pos],
         cpDone,
         lastWarp: warp ? pos : null,
+        crumbleLeft,
       };
 
       if (samePos(pos, stage.goal) && cpDone.every(Boolean)) {
