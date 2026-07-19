@@ -58,14 +58,15 @@ export const STAGE_DEFS: StageDef[] = [
     label: "STAGE 05",
     desc: "CRUMBLE",
     size: 5,
-    seed: 42,
+    seed: 55,
     start: [0, 0],
     goal: [4, 4],
     checkpoints: [{ row: 2, col: 2 }],
     warps: [],
+    // 最適経路が CP への往復で 2 回ずつ通るマス。無駄な往復をすると床が抜けて詰む
     crumbleCells: [
-      { pos: [2, 1], uses: 2 },
-      { pos: [1, 2], uses: 2 },
+      { pos: [2, 3], uses: 2 },
+      { pos: [3, 4], uses: 2 },
     ],
   },
   {
