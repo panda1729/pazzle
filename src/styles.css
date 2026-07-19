@@ -187,6 +187,10 @@ button {
   border-color: #cc4444;
   color: #cc4444;
 }
+.action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
 /* ── Legend ── */
 .legend {
@@ -204,6 +208,12 @@ button {
 }
 .legend-warp {
   color: #4a3a70;
+}
+.legend-heavy {
+  color: #8a6212;
+}
+.legend-crumble {
+  color: #6a4a2a;
 }
 .key-help {
   font-size: 7px;

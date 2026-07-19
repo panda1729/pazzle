@@ -17,10 +17,20 @@ export default function App() {
   useEffect(() => setShowHint(false), [state.stageIdx]);
 
   // 現在地から未通過チェックポイントを経由してゴールへ向かう最短経路
+  // 注: 崩れる床の残回数を考慮しない既知の制限。ヒント経路が不正になる可能性あり
+  // 一筆書きモードはハミルトン路探索が未実装なのでヒントを出さない
   const hintPath = useMemo(() => {
-    if (!showHint || state.status !== "playing") return null;
+    if (stage.oneStroke || !showHint || state.status !== "playing") return null;
     const remaining = stage.checkpoints.filter((_, i) => !state.cpDone[i]);
-    return findRouteThrough(stage.grid, stage.size, state.pos, stage.goal, remaining, stage.warps);
+    return findRouteThrough(
+      stage.grid,
+      stage.size,
+      state.pos,
+      stage.goal,
+      remaining,
+      stage.warps,
+      stage.heavyCells,
+    );
   }, [showHint, state.status, state.pos, state.cpDone, stage]);
 
   useEffect(() => {
@@ -58,6 +68,7 @@ export default function App() {
           visitedPath={state.visited}
           hintPath={hintPath}
           warpFlash={state.lastWarp}
+          crumbleLeft={state.crumbleLeft}
         />
       </div>
 
@@ -68,6 +79,7 @@ export default function App() {
         <button
           onClick={() => setShowHint((h) => !h)}
           className={`action-btn${showHint ? " is-primary" : ""}`}
+          disabled={stage.oneStroke}
         >
           HINT {showHint ? "ON" : "OFF"}
         </button>
@@ -77,6 +89,8 @@ export default function App() {
         <span className="legend-goal">GOAL</span>
         <span className="legend-cp">CHECKPOINT</span>
         <span className="legend-warp">WARP</span>
+        <span className="legend-heavy">×2</span>
+        <span className="legend-crumble">CRUMBLE</span>
       </div>
       <div className="key-help">ARROW KEYS / WASD</div>
 
